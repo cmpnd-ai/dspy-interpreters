@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DSPy Interpreter Conformance</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b1020; --card:#151c31; --line:#2a3554; --text:#eef2ff; --muted:#aab4d0; --green:#4ade80; --red:#fb7185; --amber:#fbbf24; }
+    * { box-sizing:border-box } body { margin:0; font:15px/1.5 ui-sans-serif,system-ui; background:radial-gradient(circle at 20% 0,#172554,var(--bg) 35%); color:var(--text) }
+    main { max-width:1180px; margin:auto; padding:48px 24px 80px } h1 { font-size:clamp(2rem,5vw,4rem); margin:0 0 8px; letter-spacing:-.04em } h2 { margin-top:42px } p { color:var(--muted); max-width:780px }
+    .legend,.meta { display:flex; gap:18px; flex-wrap:wrap; color:var(--muted) } .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; margin-top:22px }
+    .card { background:color-mix(in srgb,var(--card) 93%,transparent); border:1px solid var(--line); border-radius:14px; padding:20px; box-shadow:0 14px 35px #0004 }
+    .card h3 { margin:0 0 14px; display:flex; justify-content:space-between; gap:12px } .suite { border-top:1px solid var(--line); padding:10px 0; display:flex; justify-content:space-between }
+    .pass { color:var(--green) } .fail { color:var(--red) } .blocked { color:var(--amber) } code { font:12px ui-monospace,monospace; color:#c7d2fe }
+    .proof { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:16px } @media(max-width:720px){.proof{grid-template-columns:1fr}}
+  </style>
+</head>
+<body><main>
+  <div class="meta"><span>PRIVATE PACKAGE BUILD</span><span id="timestamp">Loading report…</span><span id="revision"></span></div>
+  <h1>Interpreter conformance,<br>proved by consumers.</h1>
+  <p>This dashboard distinguishes normative DSPy behavior from backend security claims. Green means executable black-box evidence; amber means the implementation is intentionally not claiming compatibility yet.</p>
+  <div class="legend"><span><i class="dot" style="background:var(--green)"></i>passing</span><span><i class="dot" style="background:var(--red)"></i>failing</span><span><i class="dot" style="background:var(--amber)"></i>blocked / not claimed</span></div>
+  <section id="cards" class="grid"></section>
+  <h2>What each layer proves</h2>
+  <section class="proof">
+    <div class="card"><h3>check_interpreter</h3><p>Lifecycle, Python execution, namespace persistence, fresh isolation, recoverable errors, host tools, authority revocation, typed SUBMIT, immediate termination after accepted SUBMIT, and terminal shutdown.</p></div>
+    <div class="card"><h3>check_bind</h3><p>The optional native binding extension atomically replaces tools and output fields, copies caller-owned inputs, and revokes removed authority.</p></div>
+    <div class="card"><h3>check_execution_instructions</h3><p>The optional backend description is a stable, nonempty string. It is metadata for the action model—not a per-turn input.</p></div>
+    <div class="card"><h3>check_rlm</h3><p>A real deterministic <code>dspy.RLM</code> uses any offered execution instructions, a user host tool, an LM-shaped host callback, typed output, factory ownership, and shutdown.</p></div>
+    <div class="card"><h3>check_flex_facade</h3><p>A real optimized <code>dspy.Flex</code> source program invokes a host predictor and tool, transports values, and survives save/load without serializing its interpreter.</p></div>
+  </section>
+  <h2>Known public-boundary findings</h2>
+  <div class="card"><p><strong>Monty:</strong> raw Drew Monty passes RLM but fails Flex and continues after accepted <code>SUBMIT</code>. The package adapter adds a terminating host call and lowers facade-only assumptions into Monty's subset; it passes all five suites.</p><p><strong>Modal:</strong> generated code pauses on framed stdin/stdout RPC while approved tools and LM callbacks execute on the host. The protocol and live Modal Sandboxes pass all five suites without guest credentials.</p></div>
+</main>
+<script>
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+fetch('/reports/latest.json').then(r=>r.json()).then(data=>{
+  timestamp.textContent='Run '+new Date(data.generated_at).toLocaleString(); revision.textContent='rev '+data.git_revision;
+  cards.innerHTML=data.implementations.map(item=>{
+    if(item.status==='blocked') return `<article class="card"><h3>${esc(item.name)}<span class="blocked">BLOCKED</span></h3><p>${esc(item.reason)}</p></article>`;
+    const suites=Object.entries(item.suites).map(([name,r])=>`<div class="suite"><code>${esc(name)}</code><strong class="${r.passed?'pass':'fail'}">${r.passed?'PASS':'FAIL'} · ${r.results.filter(x=>x.passed).length}/${r.results.length}</strong></div>`).join('');
+    const ok=Object.values(item.suites).every(x=>x.passed); return `<article class="card"><h3>${esc(item.name)}<span class="${ok?'pass':'fail'}">${ok?'CONFORMANT':'PARTIAL'}</span></h3>${suites}</article>`;
+  }).join('');
+}).catch(e=>cards.innerHTML=`<div class="card fail">Report unavailable: ${esc(e)}</div>`);
+</script></body></html>

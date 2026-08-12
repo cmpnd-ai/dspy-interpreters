@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dspy-interpreters"
+version = "0.1.0"
+description = "Conformance checks and interpreter implementations for DSPy CodeInterpreter"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["dspy>=3.3.0"]
+
+[project.urls]
+Repository = "https://github.com/cmpnd-ai/dspy-interpreters"
+Issues = "https://github.com/cmpnd-ai/dspy-interpreters/issues"
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.9"]
+monty = ["dspy-monty-interpreter>=0.3.0"]
+modal = ["modal>=1.5.3"]
+
+[tool.uv.sources]
+# Remove this source pin after the execution-instructions and bind changes are
+# available in a DSPy release. Published package metadata still uses dspy>=3.3.0.
+dspy = { git = "https://github.com/stanfordnlp/dspy.git", rev = "f9968dea1c870780c075fe9e8fe3ecedc825947b" }
+
+[tool.uv]
+# 1.96.1 was yanked after publishing only a CPython 3.10 wheel.
+constraint-dependencies = ["litellm<1.96.1"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dspy_interpreters"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "RUF"]
