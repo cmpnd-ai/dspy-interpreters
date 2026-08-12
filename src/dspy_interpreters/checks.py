@@ -343,8 +343,9 @@ def _rlm_real_consumer(factory: Callable[[], CodeInterpreter]) -> None:
             self.prompts.append(prompt)
             return ["brokered"]
 
-    class Actions:
-        def __init__(self) -> None:
+    class Actions(dspy.Predict):
+        def __init__(self, signature: type[dspy.Signature]) -> None:
+            super().__init__(signature)
             self.calls: list[dict[str, Any]] = []
             self.actions = (
                 dspy.Prediction(
@@ -358,12 +359,11 @@ def _rlm_real_consumer(factory: Callable[[], CodeInterpreter]) -> None:
                 dspy.Prediction(reasoning="submit typed result", code="SUBMIT(answer=f'{partial}:{semantic}')"),
             )
 
-        def __call__(self, **kwargs: Any) -> dspy.Prediction:
+        def forward(self, **kwargs: Any) -> dspy.Prediction:
             self.calls.append(kwargs)
             return self.actions[len(self.calls) - 1]
 
     sub_lm = SubLM()
-    actions = Actions()
     rlm = dspy.RLM(
         "question: str -> answer: str",
         max_iters=2,
@@ -371,7 +371,7 @@ def _rlm_real_consumer(factory: Callable[[], CodeInterpreter]) -> None:
         sub_lm=sub_lm,
         interpreter_factory=recording_factory,
     )
-    actions.signature = rlm.generate_action.signature
+    actions = Actions(rlm.generate_action.signature)
     rlm.generate_action = actions
     result = rlm(question="compute")
     assert result.answer == "42:brokered"
@@ -379,10 +379,12 @@ def _rlm_real_consumer(factory: Callable[[], CodeInterpreter]) -> None:
     assert sub_lm.prompts == ["classify"]
     assert len(instances) == 1
     assert shutdowns == instances
-    action_signature = actions.calls[0]["signature"]
     if getattr(instances[0], "execution_instructions", ""):
+        action_signature = actions.calls[0]["signature"]
         assert "Code interpreter execution environment:" in action_signature.instructions
-    assert "execution_instructions" not in action_signature.input_fields
+        assert "execution_instructions" not in action_signature.input_fields
+    else:
+        assert "signature" not in actions.calls[0]
 
 
 RLM_CHECKS: tuple[tuple[str, Check], ...] = (("rlm.real_consumer_flow", _rlm_real_consumer),)

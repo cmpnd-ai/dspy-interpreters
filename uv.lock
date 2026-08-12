@@ -422,7 +422,7 @@ wheels = [
 [[package]]
 name = "dspy"
 version = "3.3.0"
-source = { git = "https://github.com/stanfordnlp/dspy.git?rev=f9968dea1c870780c075fe9e8fe3ecedc825947b#f9968dea1c870780c075fe9e8fe3ecedc825947b" }
+source = { git = "https://github.com/stanfordnlp/dspy.git?rev=755b1d39859b41041e8cf98a3e3e5869cd7c7947#755b1d39859b41041e8cf98a3e3e5869cd7c7947" }
 dependencies = [
     { name = "anyio" },
     { name = "cachetools" },
@@ -462,7 +462,7 @@ monty = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dspy", git = "https://github.com/stanfordnlp/dspy.git?rev=f9968dea1c870780c075fe9e8fe3ecedc825947b" },
+    { name = "dspy", git = "https://github.com/stanfordnlp/dspy.git?rev=755b1d39859b41041e8cf98a3e3e5869cd7c7947" },
     { name = "dspy-monty-interpreter", marker = "extra == 'monty'", specifier = ">=0.3.0" },
     { name = "modal", marker = "extra == 'modal'", specifier = ">=1.5.3" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
