@@ -27,6 +27,12 @@ check_execution_instructions(MyInterpreter).raise_for_failures()
 The same generated checks are available to pytest through
 `dspy_interpreters.pytest.parametrize_interpreter`.
 
+## Development and releases
+
+Pull requests and pushes to `main` run linting, tests on Python 3.10 and 3.12,
+and package builds. Releases use reviewed GitHub Releases and PyPI Trusted
+Publishing; see [the release guide](docs/releasing.md).
+
 ## Backends
 
 - `LocalInterpreter`: fastest trusted in-process CPython; no isolation.
