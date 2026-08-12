@@ -23,7 +23,7 @@ modal = ["modal>=1.5.3"]
 [tool.uv.sources]
 # Remove this source pin after the execution-instructions and bind changes are
 # available in a DSPy release. Published package metadata still uses dspy>=3.3.0.
-dspy = { git = "https://github.com/stanfordnlp/dspy.git", rev = "dafb766fb7d73c2b367bf922826e9e4246b3741a" }
+dspy = { git = "https://github.com/stanfordnlp/dspy.git", rev = "ae24ce49a4b9fe9494b0c90da5309d92aa273601" }
 
 [tool.uv]
 # 1.96.1 was yanked after publishing only a CPython 3.10 wheel.
