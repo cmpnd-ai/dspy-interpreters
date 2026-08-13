@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import keyword
+import threading
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
@@ -156,6 +157,8 @@ class ModalInterpreter:
         self._sandbox: Any = None
         self._stdout: Any = None
         self._ended = False
+        self._execution_lock = threading.Lock()
+        self._start_lock = threading.Lock()
 
     @property
     def execution_instructions(self) -> str:
@@ -180,9 +183,12 @@ class ModalInterpreter:
     def _receive(self) -> dict[str, Any]:
         try:
             line = next(self._stdout)
-            return json.loads(line)
+            message = json.loads(line)
         except Exception as exc:
             self._terminal(f"{self._provider_name} stdout protocol failed: {exc}", exc)
+        if not isinstance(message, dict):
+            self._terminal(f"{self._provider_name} worker returned a non-object message: {message!r}")
+        return message
 
     def _terminal(self, message: str, cause: Exception | None = None) -> None:
         self._ended = True
@@ -191,6 +197,9 @@ class ModalInterpreter:
                 self._sandbox.terminate(wait=True)
             except Exception:
                 pass
+            finally:
+                self._sandbox = None
+                self._stdout = None
         error = CodeInterpreterError(message)
         if cause is not None:
             raise error from cause
@@ -198,37 +207,39 @@ class ModalInterpreter:
 
     def start(self) -> None:
         self._check_active()
-        if self._sandbox is not None:
-            return
-        try:
-            if self._sandbox_factory is not None:
-                self._sandbox = self._sandbox_factory()
-            else:
-                import modal
+        with self._start_lock:
+            self._check_active()
+            if self._sandbox is not None:
+                return
+            try:
+                if self._sandbox_factory is not None:
+                    self._sandbox = self._sandbox_factory()
+                else:
+                    import modal
 
-                app = modal.App.lookup(self._app_name, create_if_missing=True)
-                self._sandbox = modal.Sandbox.create(
-                    "python",
-                    "-u",
-                    "-c",
-                    _WORKER,
-                    app=app,
-                    image=modal.Image.debian_slim(),
-                    timeout=self._timeout,
-                    idle_timeout=self._idle_timeout,
-                    cpu=self._cpu,
-                    memory=self._memory,
-                    block_network=self._block_network,
-                    verbose=False,
-                )
-            self._stdout = iter(self._sandbox.stdout)
-            ready = self._receive()
-        except CodeInterpreterError:
-            raise
-        except Exception as exc:
-            self._terminal(f"Unable to start {self._provider_name} sandbox: {exc}", exc)
-        if ready != {"type": "ready"}:
-            self._terminal(f"{self._provider_name} worker returned an invalid ready message: {ready!r}")
+                    app = modal.App.lookup(self._app_name, create_if_missing=True)
+                    self._sandbox = modal.Sandbox.create(
+                        "python",
+                        "-u",
+                        "-c",
+                        _WORKER,
+                        app=app,
+                        image=modal.Image.debian_slim(),
+                        timeout=self._timeout,
+                        idle_timeout=self._idle_timeout,
+                        cpu=self._cpu,
+                        memory=self._memory,
+                        block_network=self._block_network,
+                        verbose=False,
+                    )
+                self._stdout = iter(self._sandbox.stdout)
+                ready = self._receive()
+            except CodeInterpreterError:
+                raise
+            except Exception as exc:
+                self._terminal(f"Unable to start {self._provider_name} sandbox: {exc}", exc)
+            if ready != {"type": "ready"}:
+                self._terminal(f"{self._provider_name} worker returned an invalid ready message: {ready!r}")
 
     def bind(
         self,
@@ -237,6 +248,8 @@ class ModalInterpreter:
         output_fields: Sequence[Mapping[str, Any]] | None = None,
     ) -> None:
         self._check_active()
+        if self._execution_lock.locked():
+            raise CodeInterpreterError(f"Cannot bind while {self._provider_name} execution is active")
         copied_tools = dict(tools)
         for name, tool in copied_tools.items():
             if not isinstance(name, str) or not name.isidentifier() or keyword.iskeyword(name) or name == "SUBMIT":
@@ -246,7 +259,9 @@ class ModalInterpreter:
         copied_fields = None if output_fields is None else [dict(field) for field in output_fields]
         if copied_fields is not None:
             names = [field.get("name") for field in copied_fields]
-            if any(not isinstance(name, str) or not name.isidentifier() for name in names):
+            if any(
+                not isinstance(name, str) or not name.isidentifier() or keyword.iskeyword(name) for name in names
+            ):
                 raise CodeInterpreterError("output field names must be Python identifiers")
             if len(names) != len(set(names)):
                 raise CodeInterpreterError("output field names must be unique")
@@ -269,35 +284,51 @@ class ModalInterpreter:
         self._send(response)
 
     def execute(self, code: str, variables: dict[str, Any] | None = None) -> Any:
-        self.start()
+        if not self._execution_lock.acquire(blocking=False):
+            raise CodeInterpreterError(f"{self._provider_name} already has an active execution")
+        set_deadline = getattr(self._stdout, "set_deadline", None)
+        clear_deadline = getattr(self._stdout, "clear_deadline", None)
         try:
-            json.dumps(variables or {})
-        except (TypeError, ValueError) as exc:
-            raise CodeInterpreterError(f"{self._provider_name} variables must be JSON-compatible: {exc}") from exc
-        self._send({
-            "type": "execute",
-            "code": code,
-            "variables": variables or {},
-            "tools": list(self.tools),
-            "output_fields": self.output_fields,
-        })
-        while True:
-            message = self._receive()
-            if message.get("type") == "tool_request":
-                self._handle_tool(message)
-                continue
-            if message.get("type") == "terminal_error":
-                self._terminal(f"{self._provider_name} worker failed: {message.get('error')}")
-            if message.get("type") != "execution_result":
-                self._terminal(f"{self._provider_name} worker returned an unknown message: {message!r}")
-            break
-        if message["kind"] == "syntax":
-            raise SyntaxError(message["error"])
-        if message["kind"] == "execution_error":
-            raise CodeExecutionError(message["error"])
-        if message["kind"] == "final":
-            return FinalOutput(message["value"])
-        return message["value"] if message["value"] is not None else (message["stdout"] or None)
+            self.start()
+            set_deadline = getattr(self._stdout, "set_deadline", None)
+            clear_deadline = getattr(self._stdout, "clear_deadline", None)
+            if callable(set_deadline):
+                set_deadline()
+            try:
+                json.dumps(variables or {}, allow_nan=False)
+            except (TypeError, ValueError) as exc:
+                raise CodeInterpreterError(f"{self._provider_name} variables must be JSON-compatible: {exc}") from exc
+            self._send({
+                "type": "execute",
+                "code": code,
+                "variables": variables or {},
+                "tools": list(self.tools),
+                "output_fields": self.output_fields,
+            })
+            while True:
+                message = self._receive()
+                if message.get("type") == "tool_request":
+                    self._handle_tool(message)
+                    continue
+                if message.get("type") == "terminal_error":
+                    self._terminal(f"{self._provider_name} worker failed: {message.get('error')}")
+                if message.get("type") != "execution_result":
+                    self._terminal(f"{self._provider_name} worker returned an unknown message: {message!r}")
+                break
+            kind = message.get("kind")
+            if kind == "syntax" and isinstance(message.get("error"), str):
+                raise SyntaxError(message["error"])
+            if kind == "execution_error" and isinstance(message.get("error"), str):
+                raise CodeExecutionError(message["error"])
+            if kind == "final" and "value" in message:
+                return FinalOutput(message["value"])
+            if kind != "result" or "value" not in message or "stdout" not in message:
+                self._terminal(f"{self._provider_name} worker returned a malformed execution result: {message!r}")
+            return message["value"] if message["value"] is not None else (message["stdout"] or None)
+        finally:
+            if callable(clear_deadline):
+                clear_deadline()
+            self._execution_lock.release()
 
     def shutdown(self) -> None:
         if self._ended:

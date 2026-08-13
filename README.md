@@ -73,7 +73,9 @@ package. Releases use reviewed GitHub Releases and PyPI Trusted Publishing; see
   stdin/stdout host-tool RPC, installed with the `modal` extra.
 - `ExeDevInterpreter`: persistent remote CPython in a durable exe.dev VM,
   provisioned and controlled over SSH. It uses the same host-tool RPC without
-  placing callable code or credentials in the VM.
+  placing callable code or credentials in the VM. SSH control operations and
+  executions have configurable deadlines; automatically provisioned VMs are
+  removed during shutdown and failed startup cleanup.
 - DSPy's Deno/Pyodide interpreter is exercised as the reference backend.
 
 The upstream `dbreunig/dspy-monty-interpreter` passes the real RLM consumer
