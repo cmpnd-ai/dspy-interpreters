@@ -136,6 +136,8 @@ def benchmark_interpreter(
         else:
             interpreter.tools.clear()
             interpreter.tools["add"] = add
+            if hasattr(interpreter, "_tools_registered"):
+                interpreter._tools_registered = False  # type: ignore[attr-defined]
         for _ in range(warm_runs):
             elapsed, result = _timed(lambda: interpreter.execute("add(left=19, right=23)"))
             if str(result) != "42":
