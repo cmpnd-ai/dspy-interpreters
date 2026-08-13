@@ -1,3 +1,4 @@
+from dspy_interpreters.benchmarks import BenchmarkReport, Distribution, benchmark_interpreter
 from dspy_interpreters.checks import (
     BIND_CHECKS,
     EXECUTION_INSTRUCTIONS_CHECKS,
@@ -23,10 +24,13 @@ __all__ = [
     "INTERPRETER_CHECKS",
     "PUBLIC_CHECKS",
     "RLM_CHECKS",
+    "BenchmarkReport",
     "CheckResult",
     "ConformanceReport",
+    "Distribution",
     "LocalInterpreter",
     "ModalInterpreter",
+    "benchmark_interpreter",
     "check_bind",
     "check_execution_instructions",
     "check_flex_facade",

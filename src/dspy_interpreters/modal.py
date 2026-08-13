@@ -129,6 +129,8 @@ class ModalInterpreter:
     credentials and callable implementations never need to enter the sandbox.
     """
 
+    _provider_name = "Modal"
+
     def __init__(
         self,
         tools: Mapping[str, Callable[..., Any]] | None = None,
@@ -166,21 +168,21 @@ class ModalInterpreter:
 
     def _check_active(self) -> None:
         if self._ended:
-            raise CodeInterpreterError("ModalInterpreter session has been shut down")
+            raise CodeInterpreterError(f"{type(self).__name__} session has been shut down")
 
     def _send(self, message: dict[str, Any]) -> None:
         try:
             self._sandbox.stdin.write(json.dumps(message, separators=(",", ":")) + "\n")
             self._sandbox.stdin.drain()
         except Exception as exc:
-            self._terminal(f"Modal stdin protocol failed: {exc}", exc)
+            self._terminal(f"{self._provider_name} stdin protocol failed: {exc}", exc)
 
     def _receive(self) -> dict[str, Any]:
         try:
             line = next(self._stdout)
             return json.loads(line)
         except Exception as exc:
-            self._terminal(f"Modal stdout protocol failed: {exc}", exc)
+            self._terminal(f"{self._provider_name} stdout protocol failed: {exc}", exc)
 
     def _terminal(self, message: str, cause: Exception | None = None) -> None:
         self._ended = True
@@ -224,9 +226,9 @@ class ModalInterpreter:
         except CodeInterpreterError:
             raise
         except Exception as exc:
-            self._terminal(f"Unable to start Modal Sandbox: {exc}", exc)
+            self._terminal(f"Unable to start {self._provider_name} sandbox: {exc}", exc)
         if ready != {"type": "ready"}:
-            self._terminal(f"Modal worker returned an invalid ready message: {ready!r}")
+            self._terminal(f"{self._provider_name} worker returned an invalid ready message: {ready!r}")
 
     def bind(
         self,
@@ -271,7 +273,7 @@ class ModalInterpreter:
         try:
             json.dumps(variables or {})
         except (TypeError, ValueError) as exc:
-            raise CodeInterpreterError(f"Modal variables must be JSON-compatible: {exc}") from exc
+            raise CodeInterpreterError(f"{self._provider_name} variables must be JSON-compatible: {exc}") from exc
         self._send({
             "type": "execute",
             "code": code,
@@ -285,9 +287,9 @@ class ModalInterpreter:
                 self._handle_tool(message)
                 continue
             if message.get("type") == "terminal_error":
-                self._terminal(f"Modal worker failed: {message.get('error')}")
+                self._terminal(f"{self._provider_name} worker failed: {message.get('error')}")
             if message.get("type") != "execution_result":
-                self._terminal(f"Modal worker returned an unknown message: {message!r}")
+                self._terminal(f"{self._provider_name} worker returned an unknown message: {message!r}")
             break
         if message["kind"] == "syntax":
             raise SyntaxError(message["error"])

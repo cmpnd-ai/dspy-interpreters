@@ -19,6 +19,9 @@ Issues = "https://github.com/cmpnd-ai/dspy-interpreters/issues"
 dev = ["pytest>=8", "ruff>=0.9"]
 monty = ["dspy-monty-interpreter>=0.3.0"]
 modal = ["modal>=1.5.3"]
+ikernel = ["ipykernel>=6.29", "jupyter-client>=8.6"]
+exe = []
+benchmark = ["psutil>=5.9"]
 
 [tool.uv.sources]
 # Remove this source pin after the execution-instructions and bind changes are

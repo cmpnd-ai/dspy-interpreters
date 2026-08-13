@@ -51,10 +51,24 @@ def main() -> None:
     except Exception as exc:
         implementations.append(unavailable("DSPy Deno/Pyodide reference", str(exc)))
 
+    try:
+        from dspy_interpreters.ikernel import IPythonInterpreter
+    except ImportError as exc:
+        implementations.append(unavailable("IPython kernel subprocess", str(exc)))
+    else:
+        implementations.append(run("IPython kernel subprocess", IPythonInterpreter))
+
     if "--modal" in sys.argv:
         implementations.append(run("Modal remote", ModalInterpreter))
     else:
         implementations.append(unavailable("Modal remote", "run with --modal to execute live provider checks"))
+
+    if "--exe" in sys.argv:
+        from dspy_interpreters.exe import ExeDevInterpreter
+
+        implementations.append(run("exe.dev remote", ExeDevInterpreter))
+    else:
+        implementations.append(unavailable("exe.dev remote", "run with --exe after authenticating SSH to exe.dev"))
 
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),

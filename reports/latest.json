@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-12T19:24:30.978620+00:00",
-  "git_revision": "b0c6cb2",
+  "generated_at": "2026-08-13T16:28:01.188262+00:00",
+  "git_revision": "bc1d2da",
   "implementations": [
     {
       "name": "Local / in-process",
@@ -318,6 +318,111 @@
       }
     },
     {
+      "name": "IPython kernel subprocess",
+      "suites": {
+        "check_interpreter": {
+          "passed": true,
+          "results": [
+            {
+              "id": "protocol.public_shape",
+              "passed": true,
+              "detail": null
+            },
+            {
+              "id": "lifecycle.lazy_idempotent_start",
+              "passed": true,
+              "detail": null
+            },
+            {
+              "id": "execution.python_and_output",
+              "passed": true,
+              "detail": null
+            },
+            {
+              "id": "state.namespace_persists",
+              "passed": true,
+              "detail": null
+            },
+            {
+              "id": "isolation.fresh_instances",
+              "passed": true,
+              "detail": null
+            },
+            {
+              "id": "errors.recoverable_taxonomy",
+              "passed": true,
+              "detail": null
+            },
+            {
+              "id": "tools.host_call_round_trips",
+              "passed": true,
+              "detail": null
+            },
+            {
+              "id": "tools.removal_revokes_authority",
+              "passed": true,
+              "detail": null
+            },
+            {
+              "id": "submit.typed_outputs",
+              "passed": true,
+              "detail": null
+            },
+            {
+              "id": "submit.accepted_terminates_execution",
+              "passed": true,
+              "detail": null
+            },
+            {
+              "id": "lifecycle.shutdown_is_terminal",
+              "passed": true,
+              "detail": null
+            }
+          ]
+        },
+        "check_bind": {
+          "passed": true,
+          "results": [
+            {
+              "id": "bind.atomic_replacement",
+              "passed": true,
+              "detail": null
+            }
+          ]
+        },
+        "check_execution_instructions": {
+          "passed": true,
+          "results": [
+            {
+              "id": "execution_instructions.stable_nonempty_string",
+              "passed": true,
+              "detail": null
+            }
+          ]
+        },
+        "check_rlm": {
+          "passed": true,
+          "results": [
+            {
+              "id": "rlm.real_consumer_flow",
+              "passed": true,
+              "detail": null
+            }
+          ]
+        },
+        "check_flex_facade": {
+          "passed": true,
+          "results": [
+            {
+              "id": "flex.facade_real_consumer_flow",
+              "passed": true,
+              "detail": null
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "Modal remote",
       "suites": {
         "check_interpreter": {
@@ -421,6 +526,12 @@
           ]
         }
       }
+    },
+    {
+      "name": "exe.dev remote",
+      "suites": {},
+      "status": "blocked",
+      "reason": "run with --exe after authenticating SSH to exe.dev"
     }
   ]
 }
