@@ -25,3 +25,33 @@ jobs:
       - run: uv run ruff check src tests scripts
       - run: uv run pytest -q
       - run: uv build
+
+  benchmark:
+    name: Benchmark local interpreters
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked --all-extras
+      - name: Run benchmark
+        run: >-
+          uv run --with 'deno>=2.4.5,<3'
+          python scripts/run_benchmarks.py
+          --cold-runs 3
+          --warm-runs 20
+          --strict
+          --output reports/benchmark-ci.json
+      - name: Add benchmark summary
+        if: ${{ always() && hashFiles('reports/benchmark-ci.json') != '' }}
+        run: uv run python scripts/render_benchmark_summary.py reports/benchmark-ci.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload raw benchmark report
+        if: ${{ always() && hashFiles('reports/benchmark-ci.json') != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: interpreter-benchmark-report
+          path: reports/benchmark-ci.json
+          if-no-files-found: error
+          retention-days: 30

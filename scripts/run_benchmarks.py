@@ -20,21 +20,25 @@ def main() -> None:
     parser.add_argument("--warm-runs", type=int, default=20)
     parser.add_argument("--modal", action="store_true")
     parser.add_argument("--exe", action="store_true")
+    parser.add_argument("--strict", action="store_true", help="exit nonzero when any selected backend fails")
     parser.add_argument("--output", type=Path, default=ROOT / "reports" / "benchmarks-latest.json")
     args = parser.parse_args()
 
     factories: list[tuple[str, Any]] = [("Local / in-process", LocalInterpreter)]
+    unavailable = []
     try:
         from dspy_interpreters.monty import MontyInterpreter
-    except ImportError:
-        pass
+    except ImportError as exc:
+        unavailable.append({"backend": "Monty", "status": "failed", "error": f"ImportError: {exc}"})
     else:
         factories.append(("Monty", MontyInterpreter))
     factories.append(("DSPy Deno/Pyodide", dspy.PythonInterpreter))
     try:
         from dspy_interpreters.ikernel import IPythonInterpreter
-    except ImportError:
-        pass
+    except ImportError as exc:
+        unavailable.append(
+            {"backend": "IPython kernel subprocess", "status": "failed", "error": f"ImportError: {exc}"}
+        )
     else:
         factories.append(("IPython kernel subprocess", IPythonInterpreter))
     if args.modal:
@@ -46,7 +50,7 @@ def main() -> None:
 
         factories.append(("exe.dev remote", ExeDevInterpreter))
 
-    results = []
+    results = unavailable if args.strict else []
     for name, factory in factories:
         print(f"benchmarking {name}", flush=True)
         try:
@@ -61,6 +65,8 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     print(args.output)
+    if args.strict and any(result.get("status") == "failed" for result in results):
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

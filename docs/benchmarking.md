@@ -58,3 +58,19 @@ credentials and deletes VMs created by the benchmark during shutdown.
 Compare reports only when their recorded environment and run parameters are
 appropriate. For provider decisions, run from the deployment region, use at
 least 20 cold samples, and repeat at multiple times of day.
+
+## Continuous integration
+
+Every pull request and push to `main` benchmarks the four credential-free local
+backends on a GitHub-hosted Python 3.12 runner with three cold starts and 20
+warm samples. The workflow publishes:
+
+- a Markdown table in the Actions job summary;
+- the complete JSON report as the `interpreter-benchmark-report` artifact for
+  30 days;
+- a failed benchmark job if any selected backend cannot complete its scenarios.
+
+CI numbers are useful for detecting large regressions and comparing backends on
+the same run. GitHub-hosted runner variance makes them unsuitable as strict
+latency thresholds. Modal and exe.dev remain opt-in manual benchmarks because
+ordinary CI should not require provider credentials or provision paid resources.
