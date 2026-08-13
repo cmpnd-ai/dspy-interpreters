@@ -66,6 +66,7 @@ backends on a GitHub-hosted Python 3.12 runner with three cold starts and 20
 warm samples. The workflow publishes:
 
 - a Markdown table in the Actions job summary;
+- the same table in an automatically updated pull request comment;
 - the complete JSON report as the `interpreter-benchmark-report` artifact for
   30 days;
 - a failed benchmark job if any selected backend cannot complete its scenarios.
@@ -74,3 +75,7 @@ CI numbers are useful for detecting large regressions and comparing backends on
 the same run. GitHub-hosted runner variance makes them unsuitable as strict
 latency thresholds. Modal and exe.dev remain opt-in manual benchmarks because
 ordinary CI should not require provider credentials or provision paid resources.
+
+PR comments are posted by a separate `workflow_run` workflow. It never checks
+out or executes pull request code with a write-capable token, so reports can be
+posted safely for contributions from forks.
