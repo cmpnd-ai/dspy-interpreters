@@ -299,9 +299,10 @@ def check_bind(factory: Callable[[], CodeInterpreter], on_fail: str = "collect")
     return _run_checks(BIND_CHECKS, factory, on_fail)
 
 
-def _rlm_real_consumer(factory: Callable[[], CodeInterpreter]) -> None:
+def _exercise_rlm(factory: Callable[[], CodeInterpreter]) -> dict[str, Any]:
     instances: list[CodeInterpreter] = []
     shutdowns: list[CodeInterpreter] = []
+    bind_calls: list[tuple[dict[str, Callable[..., Any]], list[dict[str, Any]] | None]] = []
 
     class RecordingInterpreter:
         def __init__(self, inner: CodeInterpreter) -> None:
@@ -310,6 +311,34 @@ def _rlm_real_consumer(factory: Callable[[], CodeInterpreter]) -> None:
         @property
         def tools(self) -> dict[str, Callable[..., Any]]:
             return self.inner.tools
+
+        @property
+        def output_fields(self) -> list[dict[str, Any]] | None:
+            return getattr(self.inner, "output_fields", None)
+
+        @output_fields.setter
+        def output_fields(self, value: list[dict[str, Any]] | None) -> None:
+            self.inner.output_fields = value  # type: ignore[attr-defined]
+
+        @property
+        def _tools_registered(self) -> bool:
+            return self.inner._tools_registered  # type: ignore[attr-defined]
+
+        @_tools_registered.setter
+        def _tools_registered(self, value: bool) -> None:
+            self.inner._tools_registered = value  # type: ignore[attr-defined]
+
+        def bind(
+            self,
+            *,
+            tools: dict[str, Callable[..., Any]],
+            output_fields: list[dict[str, Any]] | None = None,
+        ) -> None:
+            copied_fields = None if output_fields is None else [dict(field) for field in output_fields]
+            bind_calls.append((dict(tools), copied_fields))
+            bind = getattr(self.inner, "bind", None)
+            assert callable(bind), "interpreter does not implement bind"
+            bind(tools=tools, output_fields=output_fields)
 
         def start(self) -> None:
             self.inner.start()
@@ -379,20 +408,50 @@ def _rlm_real_consumer(factory: Callable[[], CodeInterpreter]) -> None:
     assert sub_lm.prompts == ["classify"]
     assert len(instances) == 1
     assert shutdowns == instances
-    if getattr(instances[0], "execution_instructions", ""):
-        action_signature = actions.calls[0]["signature"]
-        assert "Code interpreter execution environment:" in action_signature.instructions
-        assert "execution_instructions" not in action_signature.input_fields
-    else:
-        assert "signature" not in actions.calls[0]
+    return {"actions": actions.calls, "bind_calls": bind_calls}
+
+
+def _rlm_real_consumer(factory: Callable[[], CodeInterpreter]) -> None:
+    _exercise_rlm(factory)
+
+
+def _rlm_bind_integration(factory: Callable[[], CodeInterpreter]) -> None:
+    observations = _exercise_rlm(factory)
+    bind_calls = observations["bind_calls"]
+    assert bind_calls, "RLM did not configure the interpreter through bind()"
+    assert {field["name"] for field in bind_calls[0][1]} == {"answer"}
+
+
+def _rlm_execution_instructions_integration(factory: Callable[[], CodeInterpreter]) -> None:
+    observations = _exercise_rlm(factory)
+    action_signature = observations["actions"][0].get("signature")
+    assert action_signature is not None, "RLM did not pass an invocation signature containing execution instructions"
+    assert "Code interpreter execution environment:" in action_signature.instructions
+    assert "execution_instructions" not in action_signature.input_fields
 
 
 RLM_CHECKS: tuple[tuple[str, Check], ...] = (("rlm.real_consumer_flow", _rlm_real_consumer),)
+RLM_BIND_CHECKS: tuple[tuple[str, Check], ...] = (("rlm.bind_integration", _rlm_bind_integration),)
+RLM_EXECUTION_INSTRUCTIONS_CHECKS: tuple[tuple[str, Check], ...] = (
+    ("rlm.execution_instructions_integration", _rlm_execution_instructions_integration),
+)
 
 
 def check_rlm(factory: Callable[[], CodeInterpreter], on_fail: str = "collect") -> ConformanceReport:
     """Run a deterministic real ``dspy.RLM`` through the backend factory."""
     return _run_checks(RLM_CHECKS, factory, on_fail)
+
+
+def check_rlm_bind(factory: Callable[[], CodeInterpreter], on_fail: str = "collect") -> ConformanceReport:
+    """Check that ``dspy.RLM`` configures the backend through ``bind``."""
+    return _run_checks(RLM_BIND_CHECKS, factory, on_fail)
+
+
+def check_rlm_execution_instructions(
+    factory: Callable[[], CodeInterpreter], on_fail: str = "collect"
+) -> ConformanceReport:
+    """Check that ``dspy.RLM`` adds backend instructions to its action prompt."""
+    return _run_checks(RLM_EXECUTION_INSTRUCTIONS_CHECKS, factory, on_fail)
 
 
 def _flex_facade_real_consumer(factory: Callable[[], CodeInterpreter]) -> None:

@@ -5,12 +5,16 @@ from dspy_interpreters.checks import (
     FLEX_CHECKS,
     INTERPRETER_CHECKS,
     PUBLIC_CHECKS,
+    RLM_BIND_CHECKS,
     RLM_CHECKS,
+    RLM_EXECUTION_INSTRUCTIONS_CHECKS,
     check_bind,
     check_execution_instructions,
     check_flex_facade,
     check_interpreter,
     check_rlm,
+    check_rlm_bind,
+    check_rlm_execution_instructions,
 )
 from dspy_interpreters.local import LocalInterpreter
 from dspy_interpreters.modal import ModalInterpreter
@@ -23,7 +27,9 @@ __all__ = [
     "FLEX_CHECKS",
     "INTERPRETER_CHECKS",
     "PUBLIC_CHECKS",
+    "RLM_BIND_CHECKS",
     "RLM_CHECKS",
+    "RLM_EXECUTION_INSTRUCTIONS_CHECKS",
     "BenchmarkReport",
     "CheckResult",
     "ConformanceReport",
@@ -36,6 +42,8 @@ __all__ = [
     "check_flex_facade",
     "check_interpreter",
     "check_rlm",
+    "check_rlm_bind",
+    "check_rlm_execution_instructions",
     "interpreter_params",
     "parametrize_interpreter",
 ]

@@ -597,7 +597,7 @@ wheels = [
 [[package]]
 name = "dspy"
 version = "3.3.0"
-source = { git = "https://github.com/stanfordnlp/dspy.git?rev=ae24ce49a4b9fe9494b0c90da5309d92aa273601#ae24ce49a4b9fe9494b0c90da5309d92aa273601" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
     { name = "cachetools" },
@@ -613,6 +613,10 @@ dependencies = [
     { name = "requests" },
     { name = "tenacity" },
     { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/29/24/b455b9f3ed55264c1036eecfb56dece4f3e52ae7450401a155a83433ccae/dspy-3.3.0.tar.gz", hash = "sha256:39aa9531391accda8acd7903b52f3c9d2efe462d4bab0c2256db5352e7392754", size = 354248, upload-time = "2026-08-03T19:54:46.112Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/67/28/9ae061db912d63d108cfd60593c2d715b0bb0d70191ed0882c4c8780b0a4/dspy-3.3.0-py3-none-any.whl", hash = "sha256:358cbfb15d13246dc4a289bb2350c0ee602260c8a3869f7f63a48a9d2233e48c", size = 413687, upload-time = "2026-08-03T19:54:44.661Z" },
 ]
 
 [[package]]
@@ -644,7 +648,7 @@ monty = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dspy", git = "https://github.com/stanfordnlp/dspy.git?rev=ae24ce49a4b9fe9494b0c90da5309d92aa273601" },
+    { name = "dspy", specifier = ">=3.3.0,<4.0" },
     { name = "dspy-monty-interpreter", marker = "extra == 'monty'", specifier = ">=0.3.0" },
     { name = "ipykernel", marker = "extra == 'ikernel'", specifier = ">=6.29" },
     { name = "jupyter-client", marker = "extra == 'ikernel'", specifier = ">=8.6" },

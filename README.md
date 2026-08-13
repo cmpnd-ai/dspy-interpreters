@@ -3,6 +3,14 @@
 Black-box conformance checks and optional interpreter backends for DSPy's
 public `CodeInterpreter` protocol.
 
+## DSPy compatibility
+
+The package supports `dspy>=3.3.0,<4.0`. DSPy 3.2 lacks the public
+`CodeExecutionError` and `Flex` APIs required by the suite. DSPy 3.3 supports
+the base RLM consumer contract; its pending bind and execution-instruction
+integrations are exposed as separate checks and tracked as strict expected
+failures until they reach a DSPy release.
+
 ```python
 from dspy_interpreters import (
     check_bind,
@@ -10,6 +18,8 @@ from dspy_interpreters import (
     check_flex_facade,
     check_interpreter,
     check_rlm,
+    check_rlm_bind,
+    check_rlm_execution_instructions,
 )
 
 report = check_interpreter(MyInterpreter)
@@ -22,6 +32,10 @@ check_flex_facade(MyInterpreter).raise_for_failures()
 # Optional extensions proposed for the next DSPy release.
 check_bind(MyInterpreter).raise_for_failures()
 check_execution_instructions(MyInterpreter).raise_for_failures()
+
+# DSPy-core integrations; expected to fail on DSPy 3.3.0.
+check_rlm_bind(MyInterpreter).raise_for_failures()
+check_rlm_execution_instructions(MyInterpreter).raise_for_failures()
 ```
 
 The same generated checks are available to pytest through
@@ -42,9 +56,10 @@ shutdown, host process-tree RSS, and guest RSS where the runtime exposes it. See
 
 ## Development and releases
 
-Pull requests and pushes to `main` run linting, tests on Python 3.10 and 3.12,
-and package builds. Releases use reviewed GitHub Releases and PyPI Trusted
-Publishing; see [the release guide](docs/releasing.md).
+Pull requests and pushes to `main` test the lowest direct dependency versions
+on Python 3.10 and the latest compatible versions on Python 3.12, then build the
+package. Releases use reviewed GitHub Releases and PyPI Trusted Publishing; see
+[the release guide](docs/releasing.md).
 
 ## Backends
 

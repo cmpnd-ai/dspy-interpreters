@@ -12,6 +12,8 @@ from dspy_interpreters import (
     check_flex_facade,
     check_interpreter,
     check_rlm,
+    check_rlm_bind,
+    check_rlm_execution_instructions,
 )
 
 
@@ -31,6 +33,16 @@ def test_local_conformance():
 def test_local_real_consumers():
     assert check_rlm(LocalInterpreter).passed
     assert check_flex_facade(LocalInterpreter).passed
+
+
+@pytest.mark.xfail(strict=True, reason="requires the pending DSPy RLM bind integration")
+def test_rlm_uses_interpreter_bind():
+    assert check_rlm_bind(LocalInterpreter).passed
+
+
+@pytest.mark.xfail(strict=True, reason="requires the pending DSPy RLM execution-instructions integration")
+def test_rlm_uses_execution_instructions():
+    assert check_rlm_execution_instructions(LocalInterpreter).passed
 
 
 def test_mutant_shared_namespace_fails_isolation():

@@ -14,16 +14,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.12"]
+        include:
+          - python-version: "3.10"
+            resolution: lowest-direct
+          - python-version: "3.12"
+            resolution: highest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
-      - run: uv sync --locked --all-extras
-      - run: uv run ruff check src tests scripts
-      - run: uv run pytest -q
+      - name: Resolve DSPy compatibility boundary
+        run: uv lock --resolution ${{ matrix.resolution }} --upgrade-package dspy
+      - run: uv sync --locked --all-extras --resolution ${{ matrix.resolution }}
+      - run: uv run --no-sync ruff check src tests scripts
+      - run: uv run --no-sync pytest -q
       - run: uv build
 
   benchmark:

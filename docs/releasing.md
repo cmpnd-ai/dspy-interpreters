@@ -13,9 +13,10 @@ PyPI Trusted Publishing. No long-lived PyPI token is stored in GitHub.
    - Environment: `pypi`
 2. In GitHub, create the `pypi` environment. Require a maintainer's approval
    and restrict deployment to tags matching `v*`.
-3. Before the first release, replace the temporary DSPy Git source pin with a
-   released DSPy version containing the required interpreter extensions, and
-   raise the package's minimum `dspy` dependency to that version.
+3. Confirm the full required suite passes against the minimum supported DSPy
+   release and the newest release allowed by the dependency range. The two
+   strict RLM integration xfails must remain failures until their DSPy changes
+   ship; an XPASS means the dependency floor and tests need to be updated.
 
 The package name was unregistered when this workflow was added. PyPI's pending
 publisher flow creates it during the first trusted publication.
