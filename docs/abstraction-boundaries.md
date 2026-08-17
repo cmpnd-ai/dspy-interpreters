@@ -45,6 +45,16 @@ Backends should test and document these as implementation-specific security,
 resource, and operational claims. They must not influence whether DSPy accepts
 the object as a `CodeInterpreter` unless core DSPy branches on them.
 
+`LocalInterpreter(mode="subprocess")` makes this split explicit. Its
+`IsolationSpec` names portable guarantees (`filesystem_allowlist`,
+`no_ambient_network`, `memory_capped`, and so on), and the backend either
+provides each one or refuses with `IsolationUnsupportedError`. Those guarantees
+are backend claims. They surface through `dspy_interpreters.isolation.probe()`
+before start and through the interpreter's `isolation_report`
+(`IsolationReport`) after start, not through the `CodeInterpreter` contract.
+The conformance suites run the same in subprocess mode and in-process mode
+and cannot tell the two apart. See [`isolation.md`](isolation.md).
+
 ## Gaps discovered by conformance
 
 1. DSPy's Flex facade imports `types`, uses `globals`, and relies on Python magic

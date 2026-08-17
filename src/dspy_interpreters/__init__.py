@@ -16,6 +16,7 @@ from dspy_interpreters.checks import (
     check_rlm_bind,
     check_rlm_execution_instructions,
 )
+from dspy_interpreters.isolation import IsolationReport, IsolationSpec, IsolationUnsupportedError, probe
 from dspy_interpreters.local import LocalInterpreter
 from dspy_interpreters.modal import ModalInterpreter
 from dspy_interpreters.models import CheckResult, ConformanceReport
@@ -34,6 +35,9 @@ __all__ = [
     "CheckResult",
     "ConformanceReport",
     "Distribution",
+    "IsolationReport",
+    "IsolationSpec",
+    "IsolationUnsupportedError",
     "LocalInterpreter",
     "ModalInterpreter",
     "benchmark_interpreter",
@@ -46,4 +50,5 @@ __all__ = [
     "check_rlm_execution_instructions",
     "interpreter_params",
     "parametrize_interpreter",
+    "probe",
 ]

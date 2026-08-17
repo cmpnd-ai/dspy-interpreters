@@ -15,7 +15,7 @@ from typing import Any
 
 from dspy import CodeExecutionError, CodeInterpreterError, FinalOutput
 
-_BOOTSTRAP = r'''
+_BOOTSTRAP = r"""
 import ast as _dspy_ast
 import base64 as _dspy_base64
 import contextlib as _dspy_contextlib
@@ -100,7 +100,7 @@ def _dspy_execute(code_b64, variables_b64, tool_names, output_fields):
 
 _dspy_capabilities = set()
 _dspy_output_fields = None
-'''
+"""
 
 
 class _ToolServer(socketserver.ThreadingTCPServer):
@@ -199,8 +199,7 @@ class IPythonInterpreter:
             bootstrap = (
                 f"_dspy_interpreters_host={host!r}\n"
                 f"_dspy_interpreters_port={port!r}\n"
-                f"_dspy_interpreters_token={self._token!r}\n"
-                + _BOOTSTRAP
+                f"_dspy_interpreters_token={self._token!r}\n" + _BOOTSTRAP
             )
             reply = self._run_cell(bootstrap, timeout=self._startup_timeout)
             if reply["status"] != "ok":
@@ -287,10 +286,7 @@ class IPythonInterpreter:
             raise CodeInterpreterError(f"IPython variables must be JSON-compatible: {exc}") from exc
         code_b64 = base64.b64encode(code.encode()).decode()
         variables_b64 = base64.b64encode(variables_json.encode()).decode()
-        invocation = (
-            f"_dspy_execute({code_b64!r}, {variables_b64!r}, {list(self.tools)!r}, "
-            f"{self.output_fields!r})"
-        )
+        invocation = f"_dspy_execute({code_b64!r}, {variables_b64!r}, {list(self.tools)!r}, {self.output_fields!r})"
         self._executing = True
         try:
             reply = self._run_cell(invocation, timeout=self._execution_timeout)

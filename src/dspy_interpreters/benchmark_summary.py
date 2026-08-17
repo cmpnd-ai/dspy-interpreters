@@ -40,11 +40,13 @@ def render_benchmark_summary(payload: dict[str, Any]) -> str:
                 memory=_mebibytes(memory),
             )
         )
-    lines.extend([
-        "",
-        "TTI covers construction through the first completed execution. Raw samples, p95 values, host process-tree "
-        "RSS, and environment metadata are in the uploaded `interpreter-benchmark-report` artifact.",
-    ])
+    lines.extend(
+        [
+            "",
+            "TTI covers construction through the first completed execution. Raw samples, p95 values, host process-tree "
+            "RSS, and environment metadata are in the uploaded `interpreter-benchmark-report` artifact.",
+        ]
+    )
     if failures:
         lines.extend(["", "### Failures", "", *failures])
     return "\n".join(lines) + "\n"
