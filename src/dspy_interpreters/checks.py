@@ -287,9 +287,7 @@ def check_interpreter(factory: Callable[[], CodeInterpreter], on_fail: str = "co
     return _run_checks(INTERPRETER_CHECKS, factory, on_fail)
 
 
-def check_execution_instructions(
-    factory: Callable[[], CodeInterpreter], on_fail: str = "collect"
-) -> ConformanceReport:
+def check_execution_instructions(factory: Callable[[], CodeInterpreter], on_fail: str = "collect") -> ConformanceReport:
     """Check the optional stable execution-instructions extension."""
     return _run_checks(EXECUTION_INSTRUCTIONS_CHECKS, factory, on_fail)
 

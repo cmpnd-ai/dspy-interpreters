@@ -8,7 +8,7 @@ from typing import Any
 
 from dspy import CodeExecutionError, CodeInterpreterError, FinalOutput
 
-_WORKER = r'''
+_WORKER = r"""
 import ast
 import contextlib
 import io
@@ -119,7 +119,7 @@ while True:
     except Exception as error:
         send({"type": "terminal_error", "error": type(error).__name__ + ": " + str(error)})
         break
-'''
+"""
 
 
 class ModalInterpreter:
@@ -259,9 +259,7 @@ class ModalInterpreter:
         copied_fields = None if output_fields is None else [dict(field) for field in output_fields]
         if copied_fields is not None:
             names = [field.get("name") for field in copied_fields]
-            if any(
-                not isinstance(name, str) or not name.isidentifier() or keyword.iskeyword(name) for name in names
-            ):
+            if any(not isinstance(name, str) or not name.isidentifier() or keyword.iskeyword(name) for name in names):
                 raise CodeInterpreterError("output field names must be Python identifiers")
             if len(names) != len(set(names)):
                 raise CodeInterpreterError("output field names must be unique")
@@ -298,13 +296,15 @@ class ModalInterpreter:
                 json.dumps(variables or {}, allow_nan=False)
             except (TypeError, ValueError) as exc:
                 raise CodeInterpreterError(f"{self._provider_name} variables must be JSON-compatible: {exc}") from exc
-            self._send({
-                "type": "execute",
-                "code": code,
-                "variables": variables or {},
-                "tools": list(self.tools),
-                "output_fields": self.output_fields,
-            })
+            self._send(
+                {
+                    "type": "execute",
+                    "code": code,
+                    "variables": variables or {},
+                    "tools": list(self.tools),
+                    "output_fields": self.output_fields,
+                }
+            )
             while True:
                 message = self._receive()
                 if message.get("type") == "tool_request":

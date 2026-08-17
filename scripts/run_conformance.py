@@ -37,7 +37,10 @@ def unavailable(name: str, reason: str) -> dict[str, Any]:
 
 def main() -> None:
     REPORTS.mkdir(exist_ok=True)
-    implementations = [run("Local / in-process", LocalInterpreter)]
+    implementations = [
+        run("Local / in-process", LocalInterpreter),
+        run("Local / subprocess", lambda: LocalInterpreter(mode="subprocess")),
+    ]
 
     try:
         from dspy_interpreters.monty import MontyInterpreter

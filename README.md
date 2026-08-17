@@ -56,14 +56,26 @@ configuration, so its `exe` extra has no additional Python dependencies.
 from dspy_interpreters import LocalInterpreter, ModalInterpreter
 from dspy_interpreters.exe import ExeDevInterpreter
 from dspy_interpreters.ikernel import IPythonInterpreter
+from dspy_interpreters.isolation import IsolationSpec
 from dspy_interpreters.monty import MontyInterpreter
 
-trusted = LocalInterpreter()
+trusted = LocalInterpreter()  # in-process, no isolation
+worker = LocalInterpreter(mode="subprocess")  # separate local process, host authority
+confined = LocalInterpreter(mode="subprocess", isolation=IsolationSpec.confined())
 restricted = MontyInterpreter()
 kernel = IPythonInterpreter(execution_timeout=60)
 remote = ModalInterpreter(cpu=1, memory=1024, block_network=True)
 workspace = ExeDevInterpreter()  # provisions and owns one temporary VM
 ```
+
+`IsolationSpec.confined()` asks for a filesystem allowlist, no network, a clean
+environment, and memory/CPU/process/wall-time caps. The constructor or
+`start()` raises `IsolationUnsupportedError` when this machine cannot enforce a
+requested guarantee; it never downgrades in silence (on macOS pass
+`IsolationSpec.confined(memory=None)`: macOS cannot enforce a memory cap). Call
+`dspy_interpreters.isolation.probe()` to see what the machine supports, and
+read `confined.isolation_report` after start to see the mechanism behind each
+guarantee. See [`docs/isolation.md`](docs/isolation.md).
 
 Each implementation supports DSPy's constructor-time `tools` and
 `output_fields` shape as well as the proposed invocation-scoped `bind()` and
@@ -125,7 +137,8 @@ length in the guest.
 
 Interpretation:
 
-- Local is the latency floor, not a sandbox.
+- Local in-process is the latency floor, not a sandbox. The subprocess mode
+  is not in this benchmark run.
 - Monty adds roughly 0.1–0.2 ms for ordinary execution and host callbacks,
   making it the only isolated/restricted option in the same latency class.
 - Deno has a large roughly 2.3 s cold start but low single-digit-millisecond
@@ -167,12 +180,41 @@ credential secrecy, resource enforcement, or protocol integrity.
 
 | Backend | Isolation boundary | Guest filesystem / process authority | Network default | Limits and cancellation | Principal security caveats |
 |---|---|---|---|---|---|
-| Local | None; generated code runs in the DSPy process | Full host-user authority and Python object access | Host network | None | Can read credentials, mutate process state, spawn work, corrupt global stdout, or terminate the application |
+| Local (in-process) | None; generated code runs in the DSPy process | Full host-user authority and Python object access | Host network | None | Can read credentials, mutate process state, spawn work, corrupt global stdout, or terminate the application |
+| Local subprocess (confined) | Separate local worker process; OS confinement per `IsolationSpec` (Linux: bwrap or Landlock + user namespaces + seccomp; macOS: experimental Seatbelt profile; Windows: Job Object caps only) | Filesystem allowlist (runtime, session directories, listed paths); no `filesystem_allowlist` on Windows | Denied on Linux/macOS when requested; not enforceable on Windows | Memory, CPU, process count, and per-execute wall time; refused when the OS cannot enforce them | Same-kernel sandbox, not a VM; guest can find the protocol fd and forge/replay frames; host tools keep host authority; macOS profile experimental; Windows lacks filesystem/network confinement |
 | Monty | Restricted Monty runtime in worker subprocesses | Denied except explicit mounts and host tools; restricted Python/stdlib subset | Denied | `request_timeout` plus Monty CPU/memory/recursion limits when configured | Smaller language surface; host tools and writable mounts are explicit authority; no formal proof despite adversarial testing |
 | Deno / Pyodide | Python Wasm in a permissioned Deno subprocess | Deno permissions are reachable through `import js`; explicit mounts plus unintended shared Deno-cache read | Denied unless enabled | No native per-execution timeout in DSPy 3.3 | Confirmed shared-cache disclosure, stdout protocol forgery, mount basename collision, dependency/cache trust concerns |
 | IPython | Local kernel subprocess; **not a security sandbox** | Full host-user filesystem, environment, shell, subprocess, package, and credential authority | Host network | Startup/execution timeout; timed-out kernel becomes terminal | Process lifecycle isolation only; concurrent execution and callback reentrancy remain unsafe |
 | Modal | Remote provider sandbox | Remote container/session filesystem; no host filesystem unless a host tool exposes it | Blocked by default | Provider CPU, memory, total timeout, and idle timeout | Guest-controlled stdout can forge/replay protocol frames; trust Modal isolation and control plane; provider cost/availability |
 | exe.dev | Remote durable VM | Full Linux VM filesystem, processes, package installation, sudo, and persistent state | Enabled | SSH command/readiness/execution deadlines; forced process cleanup | Guest can forge the in-VM stdout protocol; trust exe.dev VM isolation/control plane; durable resources incur cost until deleted |
+
+### Local subprocess mode and isolation
+
+`LocalInterpreter(mode="subprocess")` runs generated code in a separate local
+worker process. Without an `IsolationSpec` the worker keeps host-user
+authority; it only removes the in-process risks (shared `sys.stdout`, host
+Python objects, `os._exit` of the application). With
+`IsolationSpec.confined()` the worker requests OS confinement. The vocabulary
+is a set of portable guarantees (`filesystem_allowlist`, `no_ambient_network`,
+`memory_capped`, `cpu_time_capped`, `process_count_capped`,
+`wall_time_capped`, `clean_environment`, `private_tmp`, `killed_with_host`,
+`no_new_privileges`, `reduced_kernel_surface`). A backend that cannot provide a
+requested guarantee refuses with `IsolationUnsupportedError`; it never applies
+a weaker mechanism in silence. `probe()` reports what the machine can enforce,
+and `isolation_report` reports which mechanism backs each guarantee after
+start.
+
+This is a same-kernel sandbox, not a VM. It reduces the blast radius of
+model-generated code on one user's machine. It does not stop a kernel exploit,
+it does not protect the worker protocol from code running inside the worker,
+and it is not a multi-tenant boundary. Outside bwrap mode a guest process that
+leaves the session (`setsid()`) outlives the kill of the worker's process
+group. Only Linux was tested live in this
+change; the macOS and Windows backends are unit-tested for plan generation
+only. Passing conformance in subprocess mode proves protocol behavior, not
+isolation. See [`docs/isolation.md`](docs/isolation.md) for the guarantee
+vocabulary, the per-OS mechanism table, the refusal semantics, and the
+limits of the design.
 
 ### Confirmed adversarial findings
 
@@ -180,8 +222,9 @@ These are reproduced observations, not hypothetical capability labels:
 
 #### Local and IPython are trusted runtimes
 
-- Local's `redirect_stdout` changes process-global `sys.stdout`. Concurrent
-  instances can cross-route output and leave host stdout corrupted.
+- Local's in-process `redirect_stdout` changes process-global `sys.stdout`.
+  Concurrent instances can cross-route output and leave host stdout corrupted.
+  Subprocess mode captures output inside the worker instead.
 - Local guest code can access all host Python objects, imports, environment,
   files, network, and process APIs by design.
 - IPython moves code into a child process but preserves the host user's files,
@@ -291,7 +334,8 @@ real RLM consumption, and real Flex facade execution/save/load.
 
 | Backend | Core interpreter (11 checks) | `bind` | Execution instructions | Real RLM | Flex facade |
 |---|---:|---:|---:|---:|---:|
-| Local | Pass | Pass | Pass | Pass | Pass |
+| Local (in-process) | Pass | Pass | Pass | Pass | Pass |
+| Local subprocess (plain and confined on Linux) | Pass | Pass | Pass | Pass | Pass |
 | Monty adapter | Pass | Pass | Pass | Pass | Pass |
 | Deno / Pyodide on DSPy 3.3 | Pass | Not implemented | Not implemented | Pass | Pass |
 | IPython | Pass | Pass | Pass | Pass | Pass |

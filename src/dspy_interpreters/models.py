@@ -33,9 +33,7 @@ class ConformanceReport:
 
     def raise_for_failures(self) -> None:
         if not self.passed:
-            details = "; ".join(
-                f"{result.id}: {result.detail}" for result in self.results if not result.passed
-            )
+            details = "; ".join(f"{result.id}: {result.detail}" for result in self.results if not result.passed)
             raise AssertionError(f"Interpreter conformance failed: {details}")
 
     def to_json(self, path: str | Path | None = None) -> str:
