@@ -30,11 +30,10 @@ There is no honest universal winner. Choose from the threat model:
 | Broad local Python compatibility without native host execution | DSPy Deno/Pyodide | Wasm/Deno boundary and moderate warm speed, but **not recommended as a security default until the confirmed cache and protocol issues below are fixed** |
 
 If DSPy must choose one security-oriented default for arbitrary model-generated
-code, Monty is the strongest current candidate **after RLM starts propagating
-its execution instructions**. Until then, DSPy should not imply that any one
-backend is simultaneously full Python, fast, and secure. Full-CPython untrusted
-work should use a remote sandbox; trusted work can explicitly opt into Local or
-IPython.
+code, Monty is the strongest current candidate for workloads that fit its
+restricted dialect. DSPy should not imply that any one backend is simultaneously
+full Python, fast, and secure. Full-CPython untrusted work should use a remote
+sandbox; trusted work can explicitly opt into Local or IPython.
 
 ## Install and instantiate
 
@@ -66,10 +65,15 @@ workspace = ExeDevInterpreter()  # provisions and owns one temporary VM
 ```
 
 Each implementation supports DSPy's constructor-time `tools` and
-`output_fields` shape as well as the proposed invocation-scoped `bind()` and
-stable `execution_instructions` extensions. Always call `shutdown()` in a
-`finally` block; it terminates local resources and deletes automatically owned
-remote resources.
+`output_fields` shape. They also offer two independent optional extensions:
+invocation-scoped `bind()` and stable class/factory-level
+`execution_instructions`. DSPy does not need `bind()` for its normal
+factory-owned RLM flow; it can configure the mutable protocol state directly.
+Callable wrappers around an interpreter class must copy
+`execution_instructions` onto the wrapper itself because RLM reads provider
+metadata before creating a session. Always call `shutdown()` in a `finally`
+block; it terminates local resources and deletes automatically owned remote
+resources.
 
 ## Same-machine benchmark
 
@@ -293,16 +297,19 @@ real RLM consumption, and real Flex facade execution/save/load.
 |---|---:|---:|---:|---:|---:|
 | Local | Pass | Pass | Pass | Pass | Pass |
 | Monty adapter | Pass | Pass | Pass | Pass | Pass |
-| Deno / Pyodide on DSPy 3.3 | Pass | Not implemented | Not implemented | Pass | Pass |
+| Deno / Pyodide on released DSPy 3.3 | Pass | Not implemented | Not implemented | Pass | Pass |
+| Deno / Pyodide on current DSPy main | Pass | Not implemented | Pass | Pass | Pass |
 | IPython | Pass | Pass | Pass | Pass | Pass |
 | Modal process double + live | Pass | Pass | Pass | Pass | Pass |
 | exe.dev process double + live | Pass | Pass | Pass | Pass | Pass |
 
 The package supports `dspy>=3.3.0,<4.0`. DSPy 3.2 lacks the public
-`CodeExecutionError` and `Flex` APIs required by the suite. DSPy 3.3's base RLM
-consumer flow passes, but RLM does not yet configure interpreters through
-`bind()` or append `execution_instructions` to its action signature. Those are
-separate strict expected failures. When the upstream changes land, strict XPASS
+`CodeExecutionError` and `Flex` APIs required by the suite. Released DSPy 3.3's
+base RLM consumer flow passes, but it does not append `execution_instructions`
+to its action signature. Current DSPy main includes that integration from PR
+#10136. The separate `check_rlm_bind` expected failure tracks an optional
+binding experiment, not a missing requirement for normal RLM execution. When
+the execution-instructions change reaches a supported release, strict XPASS
 makes CI fail until the compatibility marker is deliberately updated.
 
 The raw upstream `dbreunig/dspy-monty-interpreter` remains a useful negative
@@ -330,7 +337,8 @@ check_execution_instructions(MyInterpreter).raise_for_failures()
 check_rlm(MyInterpreter).raise_for_failures()
 check_flex_facade(MyInterpreter).raise_for_failures()
 
-# DSPy-core integration checks; strict xfails on DSPy 3.3.0.
+# Optional DSPy integration checks. Both strict-xfail on released DSPy 3.3;
+# execution instructions pass on current DSPy main, while bind is experimental.
 check_rlm_bind(MyInterpreter).raise_for_failures()
 check_rlm_execution_instructions(MyInterpreter).raise_for_failures()
 ```

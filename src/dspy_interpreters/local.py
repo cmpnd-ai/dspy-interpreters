@@ -23,6 +23,11 @@ class LocalInterpreter:
     rejected explicitly because correct host callback RPC is not yet provided.
     """
 
+    execution_instructions = (
+        "Code runs as trusted Python in the host process. State, imports, functions, and variables persist "
+        "for this session. Host tools and SUBMIT are available as global functions."
+    )
+
     def __init__(
         self,
         tools: dict[str, Callable[..., Any]] | None = None,
@@ -37,13 +42,6 @@ class LocalInterpreter:
         self._namespace: dict[str, Any] = {"__builtins__": __builtins__}
         self._started = False
         self._ended = False
-
-    @property
-    def execution_instructions(self) -> str:
-        return (
-            "Code runs as trusted Python in the host process. State, imports, functions, and variables persist "
-            "for this session. Host tools and SUBMIT are available as global functions."
-        )
 
     def start(self) -> None:
         if self._ended:

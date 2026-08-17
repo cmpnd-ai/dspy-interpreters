@@ -190,14 +190,10 @@ def _submit_terminates(factory: Callable[[], CodeInterpreter]) -> None:
 
 
 def _execution_instructions(factory: Callable[[], CodeInterpreter]) -> None:
-    interpreter = factory()
-    try:
-        first = getattr(interpreter, "execution_instructions", None)
-        second = getattr(interpreter, "execution_instructions", None)
-        assert isinstance(first, str) and first.strip()
-        assert second == first
-    finally:
-        interpreter.shutdown()
+    first = getattr(factory, "execution_instructions", None)
+    second = getattr(factory, "execution_instructions", None)
+    assert isinstance(first, str) and first.strip()
+    assert second == first
 
 
 def _native_bind(factory: Callable[[], CodeInterpreter]) -> None:
@@ -303,6 +299,7 @@ def _exercise_rlm(factory: Callable[[], CodeInterpreter]) -> dict[str, Any]:
     instances: list[CodeInterpreter] = []
     shutdowns: list[CodeInterpreter] = []
     bind_calls: list[tuple[dict[str, Callable[..., Any]], list[dict[str, Any]] | None]] = []
+    execution_instructions = getattr(factory, "execution_instructions", "")
 
     class RecordingInterpreter:
         def __init__(self, inner: CodeInterpreter) -> None:
@@ -358,6 +355,8 @@ def _exercise_rlm(factory: Callable[[], CodeInterpreter]) -> dict[str, Any]:
         instances.append(instance)
         return instance
 
+    recording_factory.execution_instructions = execution_instructions  # type: ignore[attr-defined]
+
     host_calls: list[tuple[int, int]] = []
 
     def add(*, left: int, right: int) -> int:
@@ -408,7 +407,11 @@ def _exercise_rlm(factory: Callable[[], CodeInterpreter]) -> dict[str, Any]:
     assert sub_lm.prompts == ["classify"]
     assert len(instances) == 1
     assert shutdowns == instances
-    return {"actions": actions.calls, "bind_calls": bind_calls}
+    return {
+        "action_signature": actions.signature,
+        "bind_calls": bind_calls,
+        "execution_instructions": execution_instructions,
+    }
 
 
 def _rlm_real_consumer(factory: Callable[[], CodeInterpreter]) -> None:
@@ -424,9 +427,10 @@ def _rlm_bind_integration(factory: Callable[[], CodeInterpreter]) -> None:
 
 def _rlm_execution_instructions_integration(factory: Callable[[], CodeInterpreter]) -> None:
     observations = _exercise_rlm(factory)
-    action_signature = observations["actions"][0].get("signature")
-    assert action_signature is not None, "RLM did not pass an invocation signature containing execution instructions"
-    assert "Code interpreter execution environment:" in action_signature.instructions
+    action_signature = observations["action_signature"]
+    execution_instructions = observations["execution_instructions"]
+    assert isinstance(execution_instructions, str) and execution_instructions.strip()
+    assert execution_instructions in action_signature.instructions
     assert "execution_instructions" not in action_signature.input_fields
 
 

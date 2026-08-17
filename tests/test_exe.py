@@ -55,6 +55,9 @@ def _factory() -> ExeDevInterpreter:
     return ExeDevInterpreter(process_factory=_ProcessSandbox, owns_vm=False)
 
 
+_factory.execution_instructions = ExeDevInterpreter.execution_instructions  # type: ignore[attr-defined]
+
+
 def test_exe_protocol_against_process_double():
     assert check_interpreter(_factory).passed
     assert check_bind(_factory).passed

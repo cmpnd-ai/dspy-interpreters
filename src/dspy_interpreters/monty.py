@@ -113,18 +113,16 @@ class MontyInterpreter(_MontyInterpreter):
     shutdown terminal. Execution and isolation remain owned by Monty.
     """
 
+    execution_instructions = (
+        "Code runs in Monty's restricted Python runtime in worker subprocesses. "
+        "State persists during this session. Only Monty's supported Python and standard-library subset is "
+        "available; network, environment, and filesystem access are denied unless explicitly mounted. "
+        "Use provided host tools for external capabilities."
+    )
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._dspy_ended = False
-
-    @property
-    def execution_instructions(self) -> str:
-        return (
-            "Code runs in Monty's restricted Python runtime in worker subprocesses. "
-            "State persists during this session. Only Monty's supported Python and standard-library subset is "
-            "available; network, environment, and filesystem access are denied unless explicitly mounted. "
-            "Use provided host tools for external capabilities."
-        )
 
     def _check_active(self) -> None:
         if self._dspy_ended:
