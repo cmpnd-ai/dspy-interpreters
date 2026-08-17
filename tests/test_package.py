@@ -40,7 +40,7 @@ def test_rlm_uses_interpreter_bind():
     assert check_rlm_bind(LocalInterpreter).passed
 
 
-@pytest.mark.xfail(strict=True, reason="requires the pending DSPy RLM execution-instructions integration")
+@pytest.mark.xfail(strict=True, reason="requires merged but unreleased DSPy PR #10136")
 def test_rlm_uses_execution_instructions():
     assert check_rlm_execution_instructions(LocalInterpreter).passed
 
@@ -75,6 +75,15 @@ def test_mutant_bind_leaks_old_tool_fails_bind():
 
     report = check_interpreter(Mutant)
     assert "tools.removal_revokes_authority" in report.failed_ids
+
+
+def test_instance_only_execution_instructions_fail_factory_metadata_check():
+    class Mutant(LocalInterpreter):
+        @property
+        def execution_instructions(self):
+            return "Only available after construction."
+
+    assert "execution_instructions.stable_nonempty_string" in check_execution_instructions(Mutant).failed_ids
 
 
 def test_mutant_runtime_error_is_terminal_fails_taxonomy():

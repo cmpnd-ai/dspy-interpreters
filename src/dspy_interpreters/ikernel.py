@@ -134,6 +134,13 @@ class IPythonInterpreter:
     and subprocess authority.
     """
 
+    execution_instructions = (
+        "Code runs as ordinary CPython in a persistent local IPython kernel subprocess. Variables, imports, "
+        "functions, working-directory changes, and installed packages persist for this session. Filesystem, "
+        "network, environment, shell, and subprocess access use the host user's permissions. This process "
+        "boundary is not a security sandbox."
+    )
+
     def __init__(
         self,
         tools: Mapping[str, Callable[..., Any]] | None = None,
@@ -156,15 +163,6 @@ class IPythonInterpreter:
         self._tool_requests: queue.Queue[tuple[dict[str, Any], threading.Event, dict[str, Any]]] = queue.Queue()
         self._ended = False
         self._executing = False
-
-    @property
-    def execution_instructions(self) -> str:
-        return (
-            "Code runs as ordinary CPython in a persistent local IPython kernel subprocess. Variables, imports, "
-            "functions, working-directory changes, and installed packages persist for this session. Filesystem, "
-            "network, environment, shell, and subprocess access use the host user's permissions. This process "
-            "boundary is not a security sandbox."
-        )
 
     def _check_active(self) -> None:
         if self._ended:

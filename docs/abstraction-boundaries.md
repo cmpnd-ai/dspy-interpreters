@@ -14,15 +14,19 @@ host-side sentinel after `SUBMIT` to prove that no later side effect occurs.
 `check_bind` and `check_execution_instructions` are separate optional-extension
 suites. Their absence does not make an implementation fail the released core
 protocol: DSPy can still replace a legacy mutable `tools` mapping, and an
-interpreter without execution instructions contributes no runtime description.
+interpreter factory without execution instructions contributes no runtime
+description. Instructions are factory-level metadata because RLM builds its
+action signature before creating an interpreter session.
 
 `check_rlm` runs a real `dspy.RLM`. It proves that a user tool and the LM-shaped
 `llm_query` host tool round-trip, that typed submission reaches the real RLM
 parser, and that factory ownership invokes shutdown. `check_rlm_bind` separately
 proves that RLM configures the backend through `bind`, while
 `check_rlm_execution_instructions` proves that offered instructions are attached
-to the action signature. Those integration checks are expected failures on DSPy
-3.3.0, keeping the released contract green without hiding the pending core work.
+to the action signature. Both integration checks are expected failures on
+released DSPy 3.3. The execution-instructions check passes on current DSPy main;
+the binding check remains pending. Strict XPASS exposes each compatibility
+transition when it reaches a supported release.
 
 `check_flex_facade` runs a real `dspy.Flex` optimized source program. It proves
 that the facade source executes, constructs and calls a real host predictor,

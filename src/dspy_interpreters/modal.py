@@ -132,6 +132,12 @@ class ModalInterpreter:
 
     _provider_name = "Modal"
 
+    execution_instructions = (
+        "Code runs as CPython in a persistent remote Modal Sandbox. State and installed packages persist for "
+        "this session. Network access is blocked by default and can be enabled by explicit host configuration. "
+        "Host tools are synchronous capabilities whose code and credentials remain in the host process."
+    )
+
     def __init__(
         self,
         tools: Mapping[str, Callable[..., Any]] | None = None,
@@ -159,15 +165,6 @@ class ModalInterpreter:
         self._ended = False
         self._execution_lock = threading.Lock()
         self._start_lock = threading.Lock()
-
-    @property
-    def execution_instructions(self) -> str:
-        network = "disabled" if self._block_network else "enabled by explicit host configuration"
-        return (
-            "Code runs as CPython in a persistent remote Modal Sandbox. State and installed packages persist for "
-            f"this session. Network access is {network}. Host tools are synchronous capabilities whose code and "
-            "credentials remain in the host process."
-        )
 
     def _check_active(self) -> None:
         if self._ended:

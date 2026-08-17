@@ -188,6 +188,13 @@ class ExeDevInterpreter(ModalInterpreter):
 
     _provider_name = "exe.dev"
 
+    execution_instructions = (
+        "Code runs as CPython in a persistent remote exe.dev Linux VM. Variables, imports, functions, files, "
+        "working-directory changes, and installed packages persist for this session. The VM provides normal "
+        "Linux filesystem, process, package-installation, and network capabilities. Host tools execute outside "
+        "the VM and their credentials are not copied into it."
+    )
+
     def __init__(
         self,
         tools: Mapping[str, Callable[..., Any]] | None = None,
@@ -223,15 +230,6 @@ class ExeDevInterpreter(ModalInterpreter):
         self._owns_vm = ssh_dest is None if owns_vm is None else owns_vm
         self._worker_path = f".cache/dspy-interpreters/worker-{id(self)}.py"
         self._vm_removed = False
-
-    @property
-    def execution_instructions(self) -> str:
-        return (
-            "Code runs as CPython in a persistent remote exe.dev Linux VM. Variables, imports, functions, files, "
-            "working-directory changes, and installed packages persist for this session. The VM provides normal "
-            "Linux filesystem, process, package-installation, and network capabilities. Host tools execute outside "
-            "the VM and their credentials are not copied into it."
-        )
 
     def _control(self, *args: str) -> Any:
         try:

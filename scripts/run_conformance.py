@@ -17,6 +17,7 @@ from dspy_interpreters import (
     check_flex_facade,
     check_interpreter,
     check_rlm,
+    check_rlm_execution_instructions,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,7 +26,14 @@ REPORTS = ROOT / "reports"
 
 def run(name: str, factory: Any) -> dict[str, Any]:
     suites = {}
-    for suite in (check_interpreter, check_bind, check_execution_instructions, check_rlm, check_flex_facade):
+    for suite in (
+        check_interpreter,
+        check_bind,
+        check_execution_instructions,
+        check_rlm,
+        check_rlm_execution_instructions,
+        check_flex_facade,
+    ):
         report = suite(factory)
         suites[suite.__name__] = report.to_dict()
     return {"name": name, "suites": suites}
