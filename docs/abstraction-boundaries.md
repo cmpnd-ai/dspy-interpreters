@@ -21,12 +21,14 @@ action signature before creating an interpreter session.
 `check_rlm` runs a real `dspy.RLM`. It proves that a user tool and the LM-shaped
 `llm_query` host tool round-trip, that typed submission reaches the real RLM
 parser, and that factory ownership invokes shutdown. `check_rlm_bind` separately
-proves that RLM configures the backend through `bind`, while
+tests the optional experiment in which RLM configures the backend through
+`bind`, while
 `check_rlm_execution_instructions` proves that offered instructions are attached
 to the action signature. Both integration checks are expected failures on
-released DSPy 3.3. The execution-instructions check passes on current DSPy main;
-the binding check remains pending. Strict XPASS exposes each compatibility
-transition when it reaches a supported release.
+released DSPy 3.3. The execution-instructions check passes on current DSPy main.
+The binding failure does not represent a missing core requirement: normal RLM
+can configure the mutable protocol state directly. Strict XPASS exposes each
+compatibility transition when it reaches a supported release.
 
 `check_flex_facade` runs a real `dspy.Flex` optimized source program. It proves
 that the facade source executes, constructs and calls a real host predictor,
