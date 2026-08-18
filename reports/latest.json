@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-13T16:28:01.188262+00:00",
-  "git_revision": "bc1d2da",
+  "generated_at": "2026-08-18T12:29:40.629207+00:00",
+  "git_revision": "04d9e80",
   "implementations": [
     {
       "name": "Local / in-process",
@@ -44,11 +44,6 @@
               "detail": null
             },
             {
-              "id": "tools.removal_revokes_authority",
-              "passed": true,
-              "detail": null
-            },
-            {
               "id": "submit.typed_outputs",
               "passed": true,
               "detail": null
@@ -60,16 +55,6 @@
             },
             {
               "id": "lifecycle.shutdown_is_terminal",
-              "passed": true,
-              "detail": null
-            }
-          ]
-        },
-        "check_bind": {
-          "passed": true,
-          "results": [
-            {
-              "id": "bind.atomic_replacement",
               "passed": true,
               "detail": null
             }
@@ -92,6 +77,16 @@
               "id": "rlm.real_consumer_flow",
               "passed": true,
               "detail": null
+            }
+          ]
+        },
+        "check_rlm_execution_instructions": {
+          "passed": false,
+          "results": [
+            {
+              "id": "rlm.execution_instructions_integration",
+              "passed": false,
+              "detail": "AssertionError: "
             }
           ]
         },
@@ -149,11 +144,6 @@
               "detail": null
             },
             {
-              "id": "tools.removal_revokes_authority",
-              "passed": true,
-              "detail": null
-            },
-            {
               "id": "submit.typed_outputs",
               "passed": true,
               "detail": null
@@ -165,16 +155,6 @@
             },
             {
               "id": "lifecycle.shutdown_is_terminal",
-              "passed": true,
-              "detail": null
-            }
-          ]
-        },
-        "check_bind": {
-          "passed": true,
-          "results": [
-            {
-              "id": "bind.atomic_replacement",
               "passed": true,
               "detail": null
             }
@@ -197,6 +177,16 @@
               "id": "rlm.real_consumer_flow",
               "passed": true,
               "detail": null
+            }
+          ]
+        },
+        "check_rlm_execution_instructions": {
+          "passed": false,
+          "results": [
+            {
+              "id": "rlm.execution_instructions_integration",
+              "passed": false,
+              "detail": "AssertionError: "
             }
           ]
         },
@@ -216,7 +206,7 @@
       "name": "DSPy Deno/Pyodide reference",
       "suites": {
         "check_interpreter": {
-          "passed": true,
+          "passed": false,
           "results": [
             {
               "id": "protocol.public_shape",
@@ -225,48 +215,43 @@
             },
             {
               "id": "lifecycle.lazy_idempotent_start",
-              "passed": true,
-              "detail": null
+              "passed": false,
+              "detail": "CodeInterpreterError: Deno executable not found. Please install Deno to proceed.\nInstallation instructions:\n> curl -fsSL https://deno.land/install.sh | sh\n*or*, on macOS with Homebrew:\n> brew install deno\nFor additional configurations: https://docs.deno.com/runtime/getting_started/installation/"
             },
             {
               "id": "execution.python_and_output",
-              "passed": true,
-              "detail": null
+              "passed": false,
+              "detail": "CodeInterpreterError: Deno executable not found. Please install Deno to proceed.\nInstallation instructions:\n> curl -fsSL https://deno.land/install.sh | sh\n*or*, on macOS with Homebrew:\n> brew install deno\nFor additional configurations: https://docs.deno.com/runtime/getting_started/installation/"
             },
             {
               "id": "state.namespace_persists",
-              "passed": true,
-              "detail": null
+              "passed": false,
+              "detail": "CodeInterpreterError: Deno executable not found. Please install Deno to proceed.\nInstallation instructions:\n> curl -fsSL https://deno.land/install.sh | sh\n*or*, on macOS with Homebrew:\n> brew install deno\nFor additional configurations: https://docs.deno.com/runtime/getting_started/installation/"
             },
             {
               "id": "isolation.fresh_instances",
-              "passed": true,
-              "detail": null
+              "passed": false,
+              "detail": "CodeInterpreterError: Deno executable not found. Please install Deno to proceed.\nInstallation instructions:\n> curl -fsSL https://deno.land/install.sh | sh\n*or*, on macOS with Homebrew:\n> brew install deno\nFor additional configurations: https://docs.deno.com/runtime/getting_started/installation/"
             },
             {
               "id": "errors.recoverable_taxonomy",
-              "passed": true,
-              "detail": null
+              "passed": false,
+              "detail": "CodeInterpreterError: Deno executable not found. Please install Deno to proceed.\nInstallation instructions:\n> curl -fsSL https://deno.land/install.sh | sh\n*or*, on macOS with Homebrew:\n> brew install deno\nFor additional configurations: https://docs.deno.com/runtime/getting_started/installation/"
             },
             {
               "id": "tools.host_call_round_trips",
-              "passed": true,
-              "detail": null
-            },
-            {
-              "id": "tools.removal_revokes_authority",
-              "passed": true,
-              "detail": null
+              "passed": false,
+              "detail": "CodeInterpreterError: Deno executable not found. Please install Deno to proceed.\nInstallation instructions:\n> curl -fsSL https://deno.land/install.sh | sh\n*or*, on macOS with Homebrew:\n> brew install deno\nFor additional configurations: https://docs.deno.com/runtime/getting_started/installation/"
             },
             {
               "id": "submit.typed_outputs",
-              "passed": true,
-              "detail": null
+              "passed": false,
+              "detail": "CodeInterpreterError: Deno executable not found. Please install Deno to proceed.\nInstallation instructions:\n> curl -fsSL https://deno.land/install.sh | sh\n*or*, on macOS with Homebrew:\n> brew install deno\nFor additional configurations: https://docs.deno.com/runtime/getting_started/installation/"
             },
             {
               "id": "submit.accepted_terminates_execution",
-              "passed": true,
-              "detail": null
+              "passed": false,
+              "detail": "CodeInterpreterError: Deno executable not found. Please install Deno to proceed.\nInstallation instructions:\n> curl -fsSL https://deno.land/install.sh | sh\n*or*, on macOS with Homebrew:\n> brew install deno\nFor additional configurations: https://docs.deno.com/runtime/getting_started/installation/"
             },
             {
               "id": "lifecycle.shutdown_is_terminal",
@@ -275,43 +260,43 @@
             }
           ]
         },
-        "check_bind": {
-          "passed": true,
-          "results": [
-            {
-              "id": "bind.atomic_replacement",
-              "passed": true,
-              "detail": null
-            }
-          ]
-        },
         "check_execution_instructions": {
-          "passed": true,
+          "passed": false,
           "results": [
             {
               "id": "execution_instructions.stable_nonempty_string",
-              "passed": true,
-              "detail": null
+              "passed": false,
+              "detail": "AssertionError: "
             }
           ]
         },
         "check_rlm": {
-          "passed": true,
+          "passed": false,
           "results": [
             {
               "id": "rlm.real_consumer_flow",
-              "passed": true,
-              "detail": null
+              "passed": false,
+              "detail": "CodeInterpreterError: Deno executable not found. Please install Deno to proceed.\nInstallation instructions:\n> curl -fsSL https://deno.land/install.sh | sh\n*or*, on macOS with Homebrew:\n> brew install deno\nFor additional configurations: https://docs.deno.com/runtime/getting_started/installation/"
+            }
+          ]
+        },
+        "check_rlm_execution_instructions": {
+          "passed": false,
+          "results": [
+            {
+              "id": "rlm.execution_instructions_integration",
+              "passed": false,
+              "detail": "CodeInterpreterError: Deno executable not found. Please install Deno to proceed.\nInstallation instructions:\n> curl -fsSL https://deno.land/install.sh | sh\n*or*, on macOS with Homebrew:\n> brew install deno\nFor additional configurations: https://docs.deno.com/runtime/getting_started/installation/"
             }
           ]
         },
         "check_flex_facade": {
-          "passed": true,
+          "passed": false,
           "results": [
             {
               "id": "flex.facade_real_consumer_flow",
-              "passed": true,
-              "detail": null
+              "passed": false,
+              "detail": "CodeInterpreterError: Deno executable not found. Please install Deno to proceed.\nInstallation instructions:\n> curl -fsSL https://deno.land/install.sh | sh\n*or*, on macOS with Homebrew:\n> brew install deno\nFor additional configurations: https://docs.deno.com/runtime/getting_started/installation/"
             }
           ]
         }
@@ -359,11 +344,6 @@
               "detail": null
             },
             {
-              "id": "tools.removal_revokes_authority",
-              "passed": true,
-              "detail": null
-            },
-            {
               "id": "submit.typed_outputs",
               "passed": true,
               "detail": null
@@ -375,16 +355,6 @@
             },
             {
               "id": "lifecycle.shutdown_is_terminal",
-              "passed": true,
-              "detail": null
-            }
-          ]
-        },
-        "check_bind": {
-          "passed": true,
-          "results": [
-            {
-              "id": "bind.atomic_replacement",
               "passed": true,
               "detail": null
             }
@@ -407,6 +377,16 @@
               "id": "rlm.real_consumer_flow",
               "passed": true,
               "detail": null
+            }
+          ]
+        },
+        "check_rlm_execution_instructions": {
+          "passed": false,
+          "results": [
+            {
+              "id": "rlm.execution_instructions_integration",
+              "passed": false,
+              "detail": "AssertionError: "
             }
           ]
         },
@@ -424,108 +404,9 @@
     },
     {
       "name": "Modal remote",
-      "suites": {
-        "check_interpreter": {
-          "passed": true,
-          "results": [
-            {
-              "id": "protocol.public_shape",
-              "passed": true,
-              "detail": null
-            },
-            {
-              "id": "lifecycle.lazy_idempotent_start",
-              "passed": true,
-              "detail": null
-            },
-            {
-              "id": "execution.python_and_output",
-              "passed": true,
-              "detail": null
-            },
-            {
-              "id": "state.namespace_persists",
-              "passed": true,
-              "detail": null
-            },
-            {
-              "id": "isolation.fresh_instances",
-              "passed": true,
-              "detail": null
-            },
-            {
-              "id": "errors.recoverable_taxonomy",
-              "passed": true,
-              "detail": null
-            },
-            {
-              "id": "tools.host_call_round_trips",
-              "passed": true,
-              "detail": null
-            },
-            {
-              "id": "tools.removal_revokes_authority",
-              "passed": true,
-              "detail": null
-            },
-            {
-              "id": "submit.typed_outputs",
-              "passed": true,
-              "detail": null
-            },
-            {
-              "id": "submit.accepted_terminates_execution",
-              "passed": true,
-              "detail": null
-            },
-            {
-              "id": "lifecycle.shutdown_is_terminal",
-              "passed": true,
-              "detail": null
-            }
-          ]
-        },
-        "check_bind": {
-          "passed": true,
-          "results": [
-            {
-              "id": "bind.atomic_replacement",
-              "passed": true,
-              "detail": null
-            }
-          ]
-        },
-        "check_execution_instructions": {
-          "passed": true,
-          "results": [
-            {
-              "id": "execution_instructions.stable_nonempty_string",
-              "passed": true,
-              "detail": null
-            }
-          ]
-        },
-        "check_rlm": {
-          "passed": true,
-          "results": [
-            {
-              "id": "rlm.real_consumer_flow",
-              "passed": true,
-              "detail": null
-            }
-          ]
-        },
-        "check_flex_facade": {
-          "passed": true,
-          "results": [
-            {
-              "id": "flex.facade_real_consumer_flow",
-              "passed": true,
-              "detail": null
-            }
-          ]
-        }
-      }
+      "suites": {},
+      "status": "blocked",
+      "reason": "run with --modal to execute live provider checks"
     },
     {
       "name": "exe.dev remote",

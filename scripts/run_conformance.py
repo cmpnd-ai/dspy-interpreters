@@ -12,7 +12,6 @@ import dspy
 from dspy_interpreters import (
     LocalInterpreter,
     ModalInterpreter,
-    check_bind,
     check_execution_instructions,
     check_flex_facade,
     check_interpreter,
@@ -28,7 +27,6 @@ def run(name: str, factory: Any) -> dict[str, Any]:
     suites = {}
     for suite in (
         check_interpreter,
-        check_bind,
         check_execution_instructions,
         check_rlm,
         check_rlm_execution_instructions,

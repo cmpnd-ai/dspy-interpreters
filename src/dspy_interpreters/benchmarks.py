@@ -130,14 +130,10 @@ def benchmark_interpreter(
         def add(*, left: int, right: int) -> int:
             return left + right
 
-        bind = getattr(interpreter, "bind", None)
-        if callable(bind):
-            bind(tools={"add": add}, output_fields=None)
-        else:
-            interpreter.tools.clear()
-            interpreter.tools["add"] = add
-            if hasattr(interpreter, "_tools_registered"):
-                interpreter._tools_registered = False  # type: ignore[attr-defined]
+        interpreter.tools.clear()
+        interpreter.tools["add"] = add
+        if hasattr(interpreter, "_tools_registered"):
+            interpreter._tools_registered = False  # type: ignore[attr-defined]
         for _ in range(warm_runs):
             elapsed, result = _timed(lambda: interpreter.execute("add(left=19, right=23)"))
             if str(result) != "42":

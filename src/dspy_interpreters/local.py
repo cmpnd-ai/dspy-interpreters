@@ -48,28 +48,6 @@ class LocalInterpreter:
             raise CodeInterpreterError("interpreter session has been shut down")
         self._started = True
 
-    def bind(
-        self,
-        *,
-        tools: dict[str, Callable[..., Any]],
-        output_fields: list[dict[str, Any]] | None = None,
-    ) -> None:
-        if self._ended:
-            raise CodeInterpreterError("interpreter session has been shut down")
-        invalid_tool = not isinstance(tools, dict) or any(
-            not isinstance(name, str) or not callable(tool) for name, tool in tools.items()
-        )
-        if invalid_tool:
-            raise TypeError("tools must map string names to callables")
-        fields = None if output_fields is None else [dict(field) for field in output_fields]
-        if fields is not None:
-            names = [field.get("name") for field in fields]
-            invalid_name = any(not isinstance(name, str) or not name.isidentifier() for name in names)
-            if invalid_name or len(set(names)) != len(names):
-                raise TypeError("output field names must be unique Python identifiers")
-        self.tools = dict(tools)
-        self.output_fields = fields
-
     def _submit(self, *args: Any, **kwargs: Any) -> None:
         if self.output_fields is None:
             signature = inspect.Signature([inspect.Parameter("value", inspect.Parameter.POSITIONAL_OR_KEYWORD)])

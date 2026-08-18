@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 import io
 import tokenize
-from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from dspy import CodeExecutionError, CodeInterpreterError, FinalOutput
@@ -108,9 +107,9 @@ def _lower_flex_source(code: str) -> str:
 class MontyInterpreter(_MontyInterpreter):
     """Conforming adapter over ``dspy-monty-interpreter``.
 
-    The wrapper supplies the new invocation-scoped binding API, corrects the
-    recoverable runtime-error class, normalizes untyped SUBMIT, and makes
-    shutdown terminal. Execution and isolation remain owned by Monty.
+    The wrapper corrects the recoverable runtime-error class, normalizes
+    untyped SUBMIT, and makes shutdown terminal. Execution and isolation remain
+    owned by Monty.
     """
 
     execution_instructions = (
@@ -131,31 +130,6 @@ class MontyInterpreter(_MontyInterpreter):
     def start(self) -> None:
         self._check_active()
         super().start()
-
-    def bind(
-        self,
-        *,
-        tools: Mapping[str, Callable[..., Any]],
-        output_fields: Sequence[Mapping[str, Any]] | None = None,
-    ) -> None:
-        self._check_active()
-        copied_tools = dict(tools)
-        if any(not isinstance(name, str) or not name.isidentifier() for name in copied_tools):
-            raise CodeInterpreterError("tool names must be Python identifiers")
-        if any(not callable(tool) for tool in copied_tools.values()):
-            raise CodeInterpreterError("tools must be callable")
-        copied_fields = None if output_fields is None else [dict(field) for field in output_fields]
-        if copied_fields is not None:
-            names = [field.get("name") for field in copied_fields]
-            invalid_names = any(not isinstance(name, str) or not name.isidentifier() for name in names)
-            if invalid_names or len(set(names)) != len(names):
-                raise CodeInterpreterError("output field names must be unique Python identifiers")
-
-        # Monty supplies the external function map on every feed_run, so replacing
-        # this mapping revokes capabilities without resetting the live namespace.
-        self.tools.clear()
-        self.tools.update(copied_tools)
-        self.output_fields = copied_fields
 
     def execute(self, code: str, variables: dict[str, Any] | None = None) -> Any:
         self._check_active()

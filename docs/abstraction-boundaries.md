@@ -7,28 +7,23 @@ security and deployment claims.
 
 `check_interpreter` can distinguish implementations that lose session state,
 share fresh instances, collapse recoverable errors into terminal failures,
-retain revoked tools, mishandle typed submission, or permit use after shutdown.
+break host-tool calls, mishandle typed submission, or permit use after shutdown.
 An accepted `SUBMIT` must terminate the current execution; the suite invokes a
 host-side sentinel after `SUBMIT` to prove that no later side effect occurs.
 
-`check_bind` and `check_execution_instructions` are separate optional-extension
-suites. Their absence does not make an implementation fail the released core
-protocol: DSPy can still replace a legacy mutable `tools` mapping, and an
+`check_execution_instructions` is a separate optional-extension suite. Its
+absence does not make an implementation fail the released core protocol: an
 interpreter factory without execution instructions contributes no runtime
 description. Instructions are factory-level metadata because RLM builds its
 action signature before creating an interpreter session.
 
 `check_rlm` runs a real `dspy.RLM`. It proves that a user tool and the LM-shaped
 `llm_query` host tool round-trip, that typed submission reaches the real RLM
-parser, and that factory ownership invokes shutdown. `check_rlm_bind` separately
-tests the optional experiment in which RLM configures the backend through
-`bind`, while
-`check_rlm_execution_instructions` proves that offered instructions are attached
-to the action signature. Both integration checks are expected failures on
-released DSPy 3.3. The execution-instructions check passes on current DSPy main.
-The binding failure does not represent a missing core requirement: normal RLM
-can configure the mutable protocol state directly. Strict XPASS exposes each
-compatibility transition when it reaches a supported release.
+parser, and that factory ownership invokes shutdown.
+`check_rlm_execution_instructions` separately proves that offered instructions
+are attached to the action signature. The integration check is an expected
+failure on released DSPy 3.3 and passes on current DSPy main. Strict XPASS
+exposes the compatibility transition when it reaches a supported release.
 
 `check_flex_facade` runs a real `dspy.Flex` optimized source program. It proves
 that the facade source executes, constructs and calls a real host predictor,
