@@ -66,7 +66,8 @@ backends on a GitHub-hosted Python 3.12 runner with three cold starts and 20
 warm samples. The workflow publishes:
 
 - a Markdown table in the Actions job summary;
-- the same table in an automatically updated pull request comment;
+- an automatically updated pull request comment that compares timing p50/p95
+  changes with the benchmark artifact for the pull request's base commit;
 - the complete JSON report as the `interpreter-benchmark-report` artifact for
   30 days;
 - a failed benchmark job if any selected backend cannot complete its scenarios.
