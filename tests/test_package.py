@@ -7,12 +7,10 @@ from dspy_interpreters import (
     CheckResult,
     ConformanceReport,
     LocalInterpreter,
-    check_bind,
     check_execution_instructions,
     check_flex_facade,
     check_interpreter,
     check_rlm,
-    check_rlm_bind,
     check_rlm_execution_instructions,
 )
 
@@ -26,18 +24,12 @@ def test_report_serialization():
 def test_local_conformance():
     report = check_interpreter(LocalInterpreter)
     assert report.passed, report.to_dict()
-    assert check_bind(LocalInterpreter).passed
     assert check_execution_instructions(LocalInterpreter).passed
 
 
 def test_local_real_consumers():
     assert check_rlm(LocalInterpreter).passed
     assert check_flex_facade(LocalInterpreter).passed
-
-
-@pytest.mark.xfail(strict=True, reason="requires the pending DSPy RLM bind integration")
-def test_rlm_uses_interpreter_bind():
-    assert check_rlm_bind(LocalInterpreter).passed
 
 
 @pytest.mark.xfail(strict=True, reason="requires merged but unreleased DSPy PR #10136")
@@ -64,17 +56,6 @@ def test_mutant_nonterminal_shutdown_fails_shutdown():
 
     report = check_interpreter(Mutant)
     assert "lifecycle.shutdown_is_terminal" in report.failed_ids
-
-
-def test_mutant_bind_leaks_old_tool_fails_bind():
-    class Mutant(LocalInterpreter):
-        def bind(self, *, tools, output_fields=None):
-            merged = dict(self.tools)
-            merged.update(tools)
-            super().bind(tools=merged, output_fields=output_fields)
-
-    report = check_interpreter(Mutant)
-    assert "tools.removal_revokes_authority" in report.failed_ids
 
 
 def test_instance_only_execution_instructions_fail_factory_metadata_check():
@@ -131,7 +112,6 @@ def test_monty_all_suites_when_extra_is_installed():
 
     report = check_interpreter(MontyInterpreter)
     assert report.passed, report.to_dict()
-    assert check_bind(MontyInterpreter).passed
     assert check_execution_instructions(MontyInterpreter).passed
     assert check_rlm(MontyInterpreter).passed
     assert check_flex_facade(MontyInterpreter).passed

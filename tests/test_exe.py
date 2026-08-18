@@ -9,7 +9,6 @@ import pytest
 from dspy import CodeInterpreterError
 
 from dspy_interpreters import (
-    check_bind,
     check_execution_instructions,
     check_flex_facade,
     check_interpreter,
@@ -60,7 +59,6 @@ _factory.execution_instructions = ExeDevInterpreter.execution_instructions  # ty
 
 def test_exe_protocol_against_process_double():
     assert check_interpreter(_factory).passed
-    assert check_bind(_factory).passed
     assert check_execution_instructions(_factory).passed
     assert check_rlm(_factory).passed
     assert check_flex_facade(_factory).passed

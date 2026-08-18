@@ -2,7 +2,6 @@ import pytest
 from dspy import CodeInterpreterError
 
 from dspy_interpreters import (
-    check_bind,
     check_execution_instructions,
     check_flex_facade,
     check_interpreter,
@@ -20,7 +19,7 @@ def test_ikernel_alias():
 
 @pytest.mark.parametrize(
     "suite",
-    [check_interpreter, check_bind, check_execution_instructions, check_rlm, check_flex_facade],
+    [check_interpreter, check_execution_instructions, check_rlm, check_flex_facade],
 )
 def test_ipython_kernel_conformance(suite):
     report = suite(IPythonInterpreter)

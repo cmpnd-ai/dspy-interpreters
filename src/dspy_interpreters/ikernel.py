@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 import base64
 import json
-import keyword
 import queue
 import socketserver
 import subprocess
@@ -207,31 +206,6 @@ class IPythonInterpreter:
             raise
         except Exception as exc:
             self._terminal(f"Unable to start IPython kernel: {exc}", exc)
-
-    def bind(
-        self,
-        *,
-        tools: Mapping[str, Callable[..., Any]],
-        output_fields: Sequence[Mapping[str, Any]] | None = None,
-    ) -> None:
-        self._check_active()
-        if self._executing:
-            raise RuntimeError("Cannot bind tools while IPython execution is active")
-        copied_tools = dict(tools)
-        for name, tool in copied_tools.items():
-            if not isinstance(name, str) or not name.isidentifier() or keyword.iskeyword(name) or name == "SUBMIT":
-                raise CodeInterpreterError(f"Invalid tool name: {name!r}")
-            if not callable(tool):
-                raise CodeInterpreterError(f"Tool {name!r} is not callable")
-        copied_fields = None if output_fields is None else [dict(field) for field in output_fields]
-        if copied_fields is not None:
-            names = [field.get("name") for field in copied_fields]
-            if any(not isinstance(name, str) or not name.isidentifier() or keyword.iskeyword(name) for name in names):
-                raise CodeInterpreterError("output field names must be Python identifiers")
-            if len(names) != len(set(names)):
-                raise CodeInterpreterError("output field names must be unique")
-        self.tools = copied_tools
-        self.output_fields = copied_fields
 
     def _dispatch_tool_requests(self) -> None:
         while True:

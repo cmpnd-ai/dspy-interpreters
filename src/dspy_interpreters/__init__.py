@@ -1,19 +1,15 @@
 from dspy_interpreters.benchmarks import BenchmarkReport, Distribution, benchmark_interpreter
 from dspy_interpreters.checks import (
-    BIND_CHECKS,
     EXECUTION_INSTRUCTIONS_CHECKS,
     FLEX_CHECKS,
     INTERPRETER_CHECKS,
     PUBLIC_CHECKS,
-    RLM_BIND_CHECKS,
     RLM_CHECKS,
     RLM_EXECUTION_INSTRUCTIONS_CHECKS,
-    check_bind,
     check_execution_instructions,
     check_flex_facade,
     check_interpreter,
     check_rlm,
-    check_rlm_bind,
     check_rlm_execution_instructions,
 )
 from dspy_interpreters.local import LocalInterpreter
@@ -22,12 +18,10 @@ from dspy_interpreters.models import CheckResult, ConformanceReport
 from dspy_interpreters.pytest import interpreter_params, parametrize_interpreter
 
 __all__ = [
-    "BIND_CHECKS",
     "EXECUTION_INSTRUCTIONS_CHECKS",
     "FLEX_CHECKS",
     "INTERPRETER_CHECKS",
     "PUBLIC_CHECKS",
-    "RLM_BIND_CHECKS",
     "RLM_CHECKS",
     "RLM_EXECUTION_INSTRUCTIONS_CHECKS",
     "BenchmarkReport",
@@ -37,12 +31,10 @@ __all__ = [
     "LocalInterpreter",
     "ModalInterpreter",
     "benchmark_interpreter",
-    "check_bind",
     "check_execution_instructions",
     "check_flex_facade",
     "check_interpreter",
     "check_rlm",
-    "check_rlm_bind",
     "check_rlm_execution_instructions",
     "interpreter_params",
     "parametrize_interpreter",

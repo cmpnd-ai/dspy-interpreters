@@ -24,14 +24,13 @@
   <section id="cards" class="grid"></section>
   <h2>What each layer proves</h2>
   <section class="proof">
-    <div class="card"><h3>check_interpreter</h3><p>Lifecycle, Python execution, namespace persistence, fresh isolation, recoverable errors, host tools, authority revocation, typed SUBMIT, immediate termination after accepted SUBMIT, and terminal shutdown.</p></div>
-    <div class="card"><h3>check_bind</h3><p>The optional native binding extension atomically replaces tools and output fields, copies caller-owned inputs, and revokes removed authority.</p></div>
+    <div class="card"><h3>check_interpreter</h3><p>Lifecycle, Python execution, namespace persistence, fresh isolation, recoverable errors, host tools, typed SUBMIT, immediate termination after accepted SUBMIT, and terminal shutdown.</p></div>
     <div class="card"><h3>check_execution_instructions</h3><p>The optional backend description is a stable, nonempty string. It is metadata for the action model—not a per-turn input.</p></div>
     <div class="card"><h3>check_rlm</h3><p>A real deterministic <code>dspy.RLM</code> uses any offered execution instructions, a user host tool, an LM-shaped host callback, typed output, factory ownership, and shutdown.</p></div>
     <div class="card"><h3>check_flex_facade</h3><p>A real optimized <code>dspy.Flex</code> source program invokes a host predictor and tool, transports values, and survives save/load without serializing its interpreter.</p></div>
   </section>
   <h2>Known public-boundary findings</h2>
-  <div class="card"><p><strong>Monty:</strong> raw Drew Monty passes RLM but fails Flex and continues after accepted <code>SUBMIT</code>. The package adapter adds a terminating host call and lowers facade-only assumptions into Monty's subset; it passes all five suites.</p><p><strong>Modal:</strong> generated code pauses on framed stdin/stdout RPC while approved tools and LM callbacks execute on the host. The protocol and live Modal Sandboxes pass all five suites without guest credentials.</p></div>
+  <div class="card"><p><strong>Monty:</strong> raw Drew Monty passes RLM but fails Flex and continues after accepted <code>SUBMIT</code>. The package adapter adds a terminating host call and lowers facade-only assumptions into Monty's subset; it passes all four suites.</p><p><strong>Modal:</strong> generated code pauses on framed stdin/stdout RPC while approved tools and LM callbacks execute on the host. The protocol and live Modal Sandboxes pass all four suites without guest credentials.</p></div>
 </main>
 <script>
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

@@ -43,17 +43,11 @@ def _configure(
     tools: dict[str, Callable[..., Any]],
     output_fields: list[dict[str, Any]] | None = None,
 ) -> None:
-    """Use optional bind when present, otherwise exercise DSPy's legacy public shape."""
-    bind = getattr(interpreter, "bind", None)
-    if callable(bind):
-        bind(tools=tools, output_fields=output_fields)
-        return
+    """Configure the mutable state exposed by DSPy's public protocol."""
     interpreter.tools.clear()
     interpreter.tools.update(tools)
     if hasattr(interpreter, "output_fields"):
         interpreter.output_fields = output_fields  # type: ignore[attr-defined]
-    if hasattr(interpreter, "_tools_registered"):
-        interpreter._tools_registered = False  # type: ignore[attr-defined]
 
 
 def _lifecycle(factory: Callable[[], CodeInterpreter]) -> None:
@@ -133,28 +127,13 @@ def _tools(factory: Callable[[], CodeInterpreter]) -> None:
     _with(factory, body)
 
 
-def _bind(factory: Callable[[], CodeInterpreter]) -> None:
-    def body(i: CodeInterpreter) -> None:
-        i.execute("kept = 42")
-        _configure(i, tools={"old_tool": lambda: 1})
-        assert _value_is(i.execute("old_tool()"), 1)
-        _configure(i, tools={"new_tool": lambda: 2})
-        assert _value_is(i.execute("kept + new_tool()"), 44)
-        try:
-            i.execute("old_tool()")
-        except CodeExecutionError:
-            pass
-        else:
-            raise AssertionError("replaced tool remains callable")
-
-    _with(factory, body)
-
-
 def _submit(factory: Callable[[], CodeInterpreter]) -> None:
-    def body(i: CodeInterpreter) -> None:
+    def untyped(i: CodeInterpreter) -> None:
         _configure(i, tools={})
         one = i.execute("SUBMIT(42)")
         assert isinstance(one, FinalOutput) and one.output == {"output": 42}
+
+    def typed(i: CodeInterpreter) -> None:
         _configure(
             i,
             tools={},
@@ -170,7 +149,8 @@ def _submit(factory: Callable[[], CodeInterpreter]) -> None:
             raise AssertionError("invalid typed submission was accepted")
         assert _value_is(i.execute("6 * 7"), 42)
 
-    _with(factory, body)
+    _with(factory, untyped)
+    _with(factory, typed)
 
 
 def _submit_terminates(factory: Callable[[], CodeInterpreter]) -> None:
@@ -196,30 +176,6 @@ def _execution_instructions(factory: Callable[[], CodeInterpreter]) -> None:
     assert second == first
 
 
-def _native_bind(factory: Callable[[], CodeInterpreter]) -> None:
-    interpreter = factory()
-    try:
-        bind = getattr(interpreter, "bind", None)
-        assert callable(bind), "interpreter does not implement bind"
-        tools = {"first": lambda: 1}
-        fields = [{"name": "answer", "type": "str"}]
-        bind(tools=tools, output_fields=fields)
-        tools["second"] = lambda: 2
-        fields[0]["name"] = "changed"
-        assert set(interpreter.tools) == {"first"}
-        assert _value_is(interpreter.execute("first()"), 1)
-        bind(tools={"second": lambda: 2}, output_fields=None)
-        assert set(interpreter.tools) == {"second"}
-        try:
-            interpreter.execute("first()")
-        except CodeExecutionError:
-            pass
-        else:
-            raise AssertionError("bind did not revoke the previous tool")
-    finally:
-        interpreter.shutdown()
-
-
 def _shutdown(factory: Callable[[], CodeInterpreter]) -> None:
     i = factory()
     i.shutdown()
@@ -241,7 +197,6 @@ INTERPRETER_CHECKS: tuple[tuple[str, Check], ...] = (
     ("isolation.fresh_instances", _isolation),
     ("errors.recoverable_taxonomy", _errors),
     ("tools.host_call_round_trips", _tools),
-    ("tools.removal_revokes_authority", _bind),
     ("submit.typed_outputs", _submit),
     ("submit.accepted_terminates_execution", _submit_terminates),
     ("lifecycle.shutdown_is_terminal", _shutdown),
@@ -250,8 +205,6 @@ INTERPRETER_CHECKS: tuple[tuple[str, Check], ...] = (
 EXECUTION_INSTRUCTIONS_CHECKS: tuple[tuple[str, Check], ...] = (
     ("execution_instructions.stable_nonempty_string", _execution_instructions),
 )
-
-BIND_CHECKS: tuple[tuple[str, Check], ...] = (("bind.atomic_replacement", _native_bind),)
 
 # Backward-compatible spelling for the pytest adapter and early adopters.
 PUBLIC_CHECKS = INTERPRETER_CHECKS
@@ -283,22 +236,14 @@ def check_interpreter(factory: Callable[[], CodeInterpreter], on_fail: str = "co
     return _run_checks(INTERPRETER_CHECKS, factory, on_fail)
 
 
-def check_execution_instructions(
-    factory: Callable[[], CodeInterpreter], on_fail: str = "collect"
-) -> ConformanceReport:
+def check_execution_instructions(factory: Callable[[], CodeInterpreter], on_fail: str = "collect") -> ConformanceReport:
     """Check the optional stable execution-instructions extension."""
     return _run_checks(EXECUTION_INSTRUCTIONS_CHECKS, factory, on_fail)
-
-
-def check_bind(factory: Callable[[], CodeInterpreter], on_fail: str = "collect") -> ConformanceReport:
-    """Check the optional invocation-scoped binding extension."""
-    return _run_checks(BIND_CHECKS, factory, on_fail)
 
 
 def _exercise_rlm(factory: Callable[[], CodeInterpreter]) -> dict[str, Any]:
     instances: list[CodeInterpreter] = []
     shutdowns: list[CodeInterpreter] = []
-    bind_calls: list[tuple[dict[str, Callable[..., Any]], list[dict[str, Any]] | None]] = []
     execution_instructions = getattr(factory, "execution_instructions", "")
 
     class RecordingInterpreter:
@@ -324,18 +269,6 @@ def _exercise_rlm(factory: Callable[[], CodeInterpreter]) -> dict[str, Any]:
         @_tools_registered.setter
         def _tools_registered(self, value: bool) -> None:
             self.inner._tools_registered = value  # type: ignore[attr-defined]
-
-        def bind(
-            self,
-            *,
-            tools: dict[str, Callable[..., Any]],
-            output_fields: list[dict[str, Any]] | None = None,
-        ) -> None:
-            copied_fields = None if output_fields is None else [dict(field) for field in output_fields]
-            bind_calls.append((dict(tools), copied_fields))
-            bind = getattr(self.inner, "bind", None)
-            assert callable(bind), "interpreter does not implement bind"
-            bind(tools=tools, output_fields=output_fields)
 
         def start(self) -> None:
             self.inner.start()
@@ -409,20 +342,12 @@ def _exercise_rlm(factory: Callable[[], CodeInterpreter]) -> dict[str, Any]:
     assert shutdowns == instances
     return {
         "action_signature": actions.signature,
-        "bind_calls": bind_calls,
         "execution_instructions": execution_instructions,
     }
 
 
 def _rlm_real_consumer(factory: Callable[[], CodeInterpreter]) -> None:
     _exercise_rlm(factory)
-
-
-def _rlm_bind_integration(factory: Callable[[], CodeInterpreter]) -> None:
-    observations = _exercise_rlm(factory)
-    bind_calls = observations["bind_calls"]
-    assert bind_calls, "RLM did not configure the interpreter through bind()"
-    assert {field["name"] for field in bind_calls[0][1]} == {"answer"}
 
 
 def _rlm_execution_instructions_integration(factory: Callable[[], CodeInterpreter]) -> None:
@@ -435,7 +360,6 @@ def _rlm_execution_instructions_integration(factory: Callable[[], CodeInterprete
 
 
 RLM_CHECKS: tuple[tuple[str, Check], ...] = (("rlm.real_consumer_flow", _rlm_real_consumer),)
-RLM_BIND_CHECKS: tuple[tuple[str, Check], ...] = (("rlm.bind_integration", _rlm_bind_integration),)
 RLM_EXECUTION_INSTRUCTIONS_CHECKS: tuple[tuple[str, Check], ...] = (
     ("rlm.execution_instructions_integration", _rlm_execution_instructions_integration),
 )
@@ -444,11 +368,6 @@ RLM_EXECUTION_INSTRUCTIONS_CHECKS: tuple[tuple[str, Check], ...] = (
 def check_rlm(factory: Callable[[], CodeInterpreter], on_fail: str = "collect") -> ConformanceReport:
     """Run a deterministic real ``dspy.RLM`` through the backend factory."""
     return _run_checks(RLM_CHECKS, factory, on_fail)
-
-
-def check_rlm_bind(factory: Callable[[], CodeInterpreter], on_fail: str = "collect") -> ConformanceReport:
-    """Check that ``dspy.RLM`` configures the backend through ``bind``."""
-    return _run_checks(RLM_BIND_CHECKS, factory, on_fail)
 
 
 def check_rlm_execution_instructions(

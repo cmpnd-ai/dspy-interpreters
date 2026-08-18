@@ -89,7 +89,7 @@ def test_modal_rejects_reentrant_execution_without_deadlock():
     def nested():
         return interpreter.execute("40 + 2")
 
-    interpreter.bind(tools={"nested": nested})
+    interpreter.tools["nested"] = nested
     try:
         with pytest.raises(Exception, match="already has an active execution"):
             interpreter.execute("nested()")
@@ -106,7 +106,7 @@ def test_modal_rejects_concurrent_execution_without_corrupting_stream():
         release.wait(timeout=2)
 
     interpreter = _factory()
-    interpreter.bind(tools={"wait": wait})
+    interpreter.tools["wait"] = wait
     thread = threading.Thread(target=lambda: interpreter.execute("wait()"))
     thread.start()
     assert entered.wait(timeout=2)
