@@ -16,12 +16,8 @@ class _Submission(BaseException):
         self.value = value
 
 
-class LocalInterpreter:
-    """Small trusted, in-process CodeInterpreter.
-
-    This implementation is not a security sandbox. ``mode='subprocess'`` is
-    rejected explicitly because correct host callback RPC is not yet provided.
-    """
+class InProcessInterpreter:
+    """Small trusted CodeInterpreter that executes inside the DSPy process."""
 
     execution_instructions = (
         "Code runs as trusted Python in the host process. State, imports, functions, and variables persist "
@@ -32,14 +28,11 @@ class LocalInterpreter:
         self,
         tools: dict[str, Callable[..., Any]] | None = None,
         output_fields: list[dict[str, Any]] | None = None,
-        *,
-        mode: str = "inprocess",
     ) -> None:
-        if mode != "inprocess":
-            raise NotImplementedError("subprocess mode is not implemented; use mode='inprocess'")
         self.tools = dict(tools or {})
         self.output_fields = None if output_fields is None else [dict(field) for field in output_fields]
         self._namespace: dict[str, Any] = {"__builtins__": __builtins__}
+        self._capabilities: set[str] = set()
         self._started = False
         self._ended = False
 
@@ -67,13 +60,11 @@ class LocalInterpreter:
                 raise CodeInterpreterError("variable names must be Python identifiers")
             self._namespace.update(variables)
         # Refresh capabilities on every execution so replacement revokes names.
-        old_capabilities = self._namespace.pop("__dspy_capabilities__", set())
-        for name in old_capabilities:
+        for name in self._capabilities:
             self._namespace.pop(name, None)
-        capabilities = set(self.tools) | {"SUBMIT"}
+        self._capabilities = set(self.tools) | {"SUBMIT"}
         self._namespace.update(self.tools)
         self._namespace["SUBMIT"] = self._submit
-        self._namespace["__dspy_capabilities__"] = capabilities
         try:
             tree = ast.parse(code, mode="exec")
         except SyntaxError:
