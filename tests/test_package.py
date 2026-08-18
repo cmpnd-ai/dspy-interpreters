@@ -6,7 +6,8 @@ from dspy import CodeExecutionError, CodeInterpreterError, FinalOutput
 from dspy_interpreters import (
     CheckResult,
     ConformanceReport,
-    LocalInterpreter,
+    InProcessInterpreter,
+    SubprocessInterpreter,
     check_execution_instructions,
     check_flex_facade,
     check_interpreter,
@@ -21,26 +22,40 @@ def test_report_serialization():
     assert json.loads(json.dumps(report.to_dict()))["results"][1]["detail"] == "no"
 
 
-def test_local_conformance():
-    report = check_interpreter(LocalInterpreter)
+@pytest.mark.parametrize("factory", [InProcessInterpreter, SubprocessInterpreter])
+def test_local_conformance(factory):
+    report = check_interpreter(factory)
     assert report.passed, report.to_dict()
-    assert check_execution_instructions(LocalInterpreter).passed
+    assert check_execution_instructions(factory).passed
 
 
-def test_local_real_consumers():
-    assert check_rlm(LocalInterpreter).passed
-    assert check_flex_facade(LocalInterpreter).passed
+@pytest.mark.parametrize("factory", [InProcessInterpreter, SubprocessInterpreter])
+def test_local_real_consumers(factory):
+    assert check_rlm(factory).passed
+    assert check_flex_facade(factory).passed
+
+
+def test_in_process_capability_bookkeeping_is_not_guest_state():
+    interpreter = InProcessInterpreter(tools={"old_tool": lambda: 1})
+    try:
+        interpreter.execute("old_tool()\n__dspy_capabilities__ = {'remembered'}\nremembered = 42")
+        interpreter.tools = {"new_tool": lambda: 2}
+        assert interpreter.execute("remembered") == 42
+        with pytest.raises(CodeExecutionError, match="old_tool"):
+            interpreter.execute("old_tool()")
+    finally:
+        interpreter.shutdown()
 
 
 @pytest.mark.xfail(strict=True, reason="requires merged but unreleased DSPy PR #10136")
 def test_rlm_uses_execution_instructions():
-    assert check_rlm_execution_instructions(LocalInterpreter).passed
+    assert check_rlm_execution_instructions(InProcessInterpreter).passed
 
 
 def test_mutant_shared_namespace_fails_isolation():
     shared = {"__builtins__": __builtins__}
 
-    class Mutant(LocalInterpreter):
+    class Mutant(InProcessInterpreter):
         def __init__(self):
             super().__init__()
             self._namespace = shared
@@ -50,7 +65,7 @@ def test_mutant_shared_namespace_fails_isolation():
 
 
 def test_mutant_nonterminal_shutdown_fails_shutdown():
-    class Mutant(LocalInterpreter):
+    class Mutant(InProcessInterpreter):
         def shutdown(self):
             self._ended = False
 
@@ -59,7 +74,7 @@ def test_mutant_nonterminal_shutdown_fails_shutdown():
 
 
 def test_instance_only_execution_instructions_fail_factory_metadata_check():
-    class Mutant(LocalInterpreter):
+    class Mutant(InProcessInterpreter):
         @property
         def execution_instructions(self):
             return "Only available after construction."
@@ -68,7 +83,7 @@ def test_instance_only_execution_instructions_fail_factory_metadata_check():
 
 
 def test_mutant_runtime_error_is_terminal_fails_taxonomy():
-    class Mutant(LocalInterpreter):
+    class Mutant(InProcessInterpreter):
         def execute(self, code, variables=None):
             try:
                 return super().execute(code, variables)
@@ -79,7 +94,7 @@ def test_mutant_runtime_error_is_terminal_fails_taxonomy():
 
 
 def test_mutant_loses_namespace_fails_persistence():
-    class Mutant(LocalInterpreter):
+    class Mutant(InProcessInterpreter):
         def execute(self, code, variables=None):
             result = super().execute(code, variables)
             self._namespace = {"__builtins__": __builtins__}
@@ -89,7 +104,7 @@ def test_mutant_loses_namespace_fails_persistence():
 
 
 def test_mutant_corrupts_final_output_fails_submit():
-    class Mutant(LocalInterpreter):
+    class Mutant(InProcessInterpreter):
         def execute(self, code, variables=None):
             result = super().execute(code, variables)
             if isinstance(result, FinalOutput):

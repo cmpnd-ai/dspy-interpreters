@@ -8,7 +8,7 @@ from typing import Any
 
 import dspy
 
-from dspy_interpreters import LocalInterpreter
+from dspy_interpreters import InProcessInterpreter, SubprocessInterpreter
 from dspy_interpreters.benchmarks import benchmark_interpreter
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,7 +24,10 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=ROOT / "reports" / "benchmarks-latest.json")
     args = parser.parse_args()
 
-    factories: list[tuple[str, Any]] = [("Local / in-process", LocalInterpreter)]
+    factories: list[tuple[str, Any]] = [
+        ("Local / in-process", InProcessInterpreter),
+        ("Local / subprocess", SubprocessInterpreter),
+    ]
     unavailable = []
     try:
         from dspy_interpreters.monty import MontyInterpreter
@@ -36,9 +39,7 @@ def main() -> None:
     try:
         from dspy_interpreters.ikernel import IPythonInterpreter
     except ImportError as exc:
-        unavailable.append(
-            {"backend": "IPython kernel subprocess", "status": "failed", "error": f"ImportError: {exc}"}
-        )
+        unavailable.append({"backend": "IPython kernel subprocess", "status": "failed", "error": f"ImportError: {exc}"})
     else:
         factories.append(("IPython kernel subprocess", IPythonInterpreter))
     if args.modal:
@@ -54,9 +55,7 @@ def main() -> None:
     for name, factory in factories:
         print(f"benchmarking {name}", flush=True)
         try:
-            report = benchmark_interpreter(
-                factory, name=name, cold_runs=args.cold_runs, warm_runs=args.warm_runs
-            )
+            report = benchmark_interpreter(factory, name=name, cold_runs=args.cold_runs, warm_runs=args.warm_runs)
         except Exception as exc:
             results.append({"backend": name, "status": "failed", "error": f"{type(exc).__name__}: {exc}"})
         else:
