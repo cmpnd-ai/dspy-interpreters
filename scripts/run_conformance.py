@@ -10,8 +10,9 @@ from typing import Any
 import dspy
 
 from dspy_interpreters import (
-    LocalInterpreter,
+    InProcessInterpreter,
     ModalInterpreter,
+    SubprocessInterpreter,
     check_execution_instructions,
     check_flex_facade,
     check_interpreter,
@@ -43,7 +44,10 @@ def unavailable(name: str, reason: str) -> dict[str, Any]:
 
 def main() -> None:
     REPORTS.mkdir(exist_ok=True)
-    implementations = [run("Local / in-process", LocalInterpreter)]
+    implementations = [
+        run("Local / in-process", InProcessInterpreter),
+        run("Local / subprocess", SubprocessInterpreter),
+    ]
 
     try:
         from dspy_interpreters.monty import MontyInterpreter

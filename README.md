@@ -22,7 +22,8 @@ There is no honest universal winner. Choose from the threat model:
 
 | Workload | Recommended backend | Why |
 |---|---|---|
-| Trusted generated code; latency is paramount | `LocalInterpreter` | Approximately 0.02 ms warm execution and host calls; no serialization or process boundary |
+| Trusted generated code; latency is paramount | `InProcessInterpreter` | Approximately 0.02 ms warm execution and host calls; no serialization or process boundary |
+| Trusted generated code that needs lifecycle and stdout separation | `SubprocessInterpreter` | Persistent CPython worker; approximately 0.13 ms warm execution and 0.32 ms host calls; not an OS security sandbox |
 | Untrusted code that fits restricted Python | `MontyInterpreter` | Best measured security/performance balance; approximately 0.12 ms warm execution; no escape found in the adversarial review |
 | Trusted local persistent development or real DSPy imports | `IPythonInterpreter` | Full CPython and package environment in a managed subprocess; easier lifecycle control than in-process execution |
 | Untrusted full CPython, ephemeral remote session | `ModalInterpreter` | Provider sandbox, network blocked by default, configurable CPU/memory/lifetime; higher latency and provider cost |
@@ -33,12 +34,12 @@ If DSPy must choose one security-oriented default for arbitrary model-generated
 code, Monty is the strongest current candidate for workloads that fit its
 restricted dialect. DSPy should not imply that any one backend is simultaneously
 full Python, fast, and secure. Full-CPython untrusted work should use a remote
-sandbox; trusted work can explicitly opt into Local or IPython.
+sandbox; trusted work can explicitly choose an in-process or subprocess boundary.
 
 ## Install and instantiate
 
-The core install includes the conformance API, Local, and Modal. Install only
-the runtime extras a deployment needs:
+The core install includes the conformance API, both local interpreters, and
+Modal. Install only the runtime extras a deployment needs:
 
 ```bash
 pip install dspy-interpreters
@@ -52,12 +53,13 @@ exe.dev uses the system OpenSSH client and an authenticated exe.dev SSH
 configuration, so its `exe` extra has no additional Python dependencies.
 
 ```python
-from dspy_interpreters import LocalInterpreter, ModalInterpreter
+from dspy_interpreters import InProcessInterpreter, ModalInterpreter, SubprocessInterpreter
 from dspy_interpreters.exe import ExeDevInterpreter
 from dspy_interpreters.ikernel import IPythonInterpreter
 from dspy_interpreters.monty import MontyInterpreter
 
-trusted = LocalInterpreter()
+fast = InProcessInterpreter()
+separate = SubprocessInterpreter(execution_timeout=30)
 restricted = MontyInterpreter()
 kernel = IPythonInterpreter(execution_timeout=60)
 remote = ModalInterpreter(cpu=1, memory=1024, block_network=True)
@@ -71,6 +73,13 @@ Callable wrappers around an interpreter class must copy
 metadata before creating a session. Always call `shutdown()` in a `finally`
 block; it terminates local resources and deletes automatically owned remote
 resources.
+
+`InProcessInterpreter` and `SubprocessInterpreter` intentionally have separate
+types because their boundaries are materially different. The subprocess accepts
+JSON-compatible inputs and tool results, captures generated-code output in the
+worker, and can terminate a timed-out worker. It still runs with the host user's
+filesystem, environment, credentials, process, and network authority; a child
+process alone is not a sandbox.
 
 ## Same-machine benchmark
 
@@ -139,6 +148,21 @@ Interpretation:
 - Remote p95 transfer variance is substantial. Region, provider load, image
   cache state, and the benchmark host's network path matter.
 
+### Focused local process-boundary comparison
+
+A focused run on the same Linux/Python 3.11 orb used 5 cold sessions and 100
+warm executions for each explicit local interpreter. Values are p50 / p95 in
+milliseconds:
+
+| Backend | Time to interactive | Warm scalar | Host-tool round trip | 1 MiB variable | Shutdown | Startup RSS |
+|---|---:|---:|---:|---:|---:|---:|
+| In-process | 0.021 / 0.077 | 0.015 / 0.029 | 0.024 / 0.039 | 0.024 / 0.063 | 0.001 / 0.001 | 0.0 MiB |
+| Subprocess | 25.264 / 29.012 | 0.127 / 0.177 | 0.315 / 0.346 | 7.502 / 9.218 | 7.456 / 7.500 | 10.5 MiB |
+
+The persistent subprocess costs about 25 ms once at startup. Warm scalar
+execution remains below 0.2 ms p95; host callbacks remain below 0.4 ms p95.
+Large JSON transfer is the material boundary cost.
+
 ### Memory and resource footprint
 
 Memory is not universally comparable. Host memory is the benchmark process plus
@@ -168,7 +192,8 @@ credential secrecy, resource enforcement, or protocol integrity.
 
 | Backend | Isolation boundary | Guest filesystem / process authority | Network default | Limits and cancellation | Principal security caveats |
 |---|---|---|---|---|---|
-| Local | None; generated code runs in the DSPy process | Full host-user authority and Python object access | Host network | None | Can read credentials, mutate process state, spawn work, corrupt global stdout, or terminate the application |
+| In-process | None; generated code runs in the DSPy process | Full host-user authority and Python object access | Host network | None | Can read credentials, mutate process state, spawn work, corrupt global stdout, or terminate the application |
+| Subprocess | Separate CPython process; **not a security sandbox** | Full host-user filesystem, environment, credentials, and subprocess authority | Host network | Execution timeout terminates the worker | Separates ordinary memory/stdout/lifecycle failures, but same-user code may attack the host or forge the stdio protocol |
 | Monty | Restricted Monty runtime in worker subprocesses | Denied except explicit mounts and host tools; restricted Python/stdlib subset | Denied | `request_timeout` plus Monty CPU/memory/recursion limits when configured | Smaller language surface; host tools and writable mounts are explicit authority; no formal proof despite adversarial testing |
 | Deno / Pyodide | Python Wasm in a permissioned Deno subprocess | Deno permissions are reachable through `import js`; explicit mounts plus unintended shared Deno-cache read | Denied unless enabled | No native per-execution timeout in DSPy 3.3 | Confirmed shared-cache disclosure, stdout protocol forgery, mount basename collision, dependency/cache trust concerns |
 | IPython | Local kernel subprocess; **not a security sandbox** | Full host-user filesystem, environment, shell, subprocess, package, and credential authority | Host network | Startup/execution timeout; timed-out kernel becomes terminal | Process lifecycle isolation only; concurrent execution and callback reentrancy remain unsafe |
@@ -179,12 +204,16 @@ credential secrecy, resource enforcement, or protocol integrity.
 
 These are reproduced observations, not hypothetical capability labels:
 
-#### Local and IPython are trusted runtimes
+#### Local interpreters and IPython are trusted runtimes
 
-- Local's `redirect_stdout` changes process-global `sys.stdout`. Concurrent
+- `InProcessInterpreter`'s `redirect_stdout` changes process-global `sys.stdout`. Concurrent
   instances can cross-route output and leave host stdout corrupted.
-- Local guest code can access all host Python objects, imports, environment,
+- In-process guest code can access all host Python objects, imports, environment,
   files, network, and process APIs by design.
+- `SubprocessInterpreter` keeps ordinary namespace mutation and stdout capture
+  in its worker and can terminate that worker, but deliberately adds no OS
+  confinement. Its JSON transport is a compatibility boundary, not a hostile
+  guest security boundary.
 - IPython moves code into a child process but preserves the host user's files,
   environment, credentials, network, and subprocess authority. It is useful for
   lifecycle and persistent development, not for hostile-code isolation.
@@ -269,7 +298,8 @@ behind a facade/callback bridge. Persistent AI engineering has different needs:
 
 | Backend | Python dialect | Can use real DSPy imports in guest? | Persistence model | Best fit |
 |---|---|---|---|---|
-| Local | Host CPython | Yes, from the host environment | Process lifetime; host filesystem | Fast trusted optimization loops |
+| In-process | Host CPython | Yes, from the host environment | DSPy process lifetime; host filesystem | Fast trusted optimization loops |
+| Subprocess | Full host CPython | Yes, from the worker environment | Worker lifetime; host filesystem | Trusted loops needing process lifecycle separation |
 | Monty | Restricted Python subset | No; use DSPy facade and host callbacks | Session namespace; explicit mounts | Restricted RLM/Flex execution |
 | Deno / Pyodide | Pyodide/Wasm Python | Generally facade/host bridge, not a normal DSPy installation | Session namespace; explicit mounted files | Portable local execution after security fixes |
 | IPython | Full host CPython/IPython | Yes | Kernel namespace plus host filesystem | Trusted notebooks, iterative development, optimizers |
@@ -292,7 +322,8 @@ real Flex facade execution/save/load.
 
 | Backend | Core interpreter (10 checks) | Execution instructions | Real RLM | Flex facade |
 |---|---:|---:|---:|---:|
-| Local | Pass | Pass | Pass | Pass |
+| In-process | Pass | Pass | Pass | Pass |
+| Subprocess | Pass | Pass | Pass | Pass |
 | Monty adapter | Pass | Pass | Pass | Pass |
 | Deno / Pyodide on released DSPy 3.3 | Pass | Not implemented | Pass | Pass |
 | Deno / Pyodide on current DSPy main | Pass | Pass | Pass | Pass |

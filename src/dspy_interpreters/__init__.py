@@ -12,10 +12,11 @@ from dspy_interpreters.checks import (
     check_rlm,
     check_rlm_execution_instructions,
 )
-from dspy_interpreters.local import LocalInterpreter
+from dspy_interpreters.in_process import InProcessInterpreter
 from dspy_interpreters.modal import ModalInterpreter
 from dspy_interpreters.models import CheckResult, ConformanceReport
 from dspy_interpreters.pytest import interpreter_params, parametrize_interpreter
+from dspy_interpreters.subprocess import SubprocessInterpreter
 
 __all__ = [
     "EXECUTION_INSTRUCTIONS_CHECKS",
@@ -28,8 +29,9 @@ __all__ = [
     "CheckResult",
     "ConformanceReport",
     "Distribution",
-    "LocalInterpreter",
+    "InProcessInterpreter",
     "ModalInterpreter",
+    "SubprocessInterpreter",
     "benchmark_interpreter",
     "check_execution_instructions",
     "check_flex_facade",
