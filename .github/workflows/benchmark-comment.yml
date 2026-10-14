@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download benchmark report
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.0
         with:
           name: interpreter-benchmark-report
           path: current-report
@@ -55,7 +55,7 @@ jobs:
             core.notice(`No prior benchmark artifact found for base commit ${baseSha}`);
       - name: Download prior benchmark report
         if: ${{ steps.prior.outputs.run-id != '' }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.0
         with:
           name: interpreter-benchmark-report
           path: prior-report
