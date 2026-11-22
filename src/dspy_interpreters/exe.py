@@ -78,7 +78,7 @@ class _TimedLines:
         try:
             item = self._queue.get(timeout=timeout)
         except queue.Empty as exc:
-            raise TimeoutError(f"exe.dev execution exceeded {self._timeout:g}s") from exc
+            raise TimeoutError(f"execution exceeded {self._timeout:g}s") from exc
         if item is _EOF:
             raise StopIteration
         if isinstance(item, Exception):

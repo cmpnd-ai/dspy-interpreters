@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,7 @@ def main() -> None:
     parser.add_argument("--warm-runs", type=int, default=20)
     parser.add_argument("--modal", action="store_true")
     parser.add_argument("--exe", action="store_true")
+    parser.add_argument("--smolvm", action="store_true")
     parser.add_argument("--strict", action="store_true", help="exit nonzero when any selected backend fails")
     parser.add_argument("--output", type=Path, default=ROOT / "reports" / "benchmarks-latest.json")
     args = parser.parse_args()
@@ -50,6 +52,10 @@ def main() -> None:
         from dspy_interpreters.exe import ExeDevInterpreter
 
         factories.append(("exe.dev remote", ExeDevInterpreter))
+    if args.smolvm:
+        from dspy_interpreters.smolvm import SmolvmInterpreter
+
+        factories.append(("smolvm local microVM", lambda: SmolvmInterpreter(pack=os.environ.get("SMOLVM_PACK"))))
 
     results = unavailable if args.strict else []
     for name, factory in factories:

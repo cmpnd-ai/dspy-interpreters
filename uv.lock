@@ -657,7 +657,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.9" },
 ]
-provides-extras = ["dev", "monty", "modal", "ikernel", "exe", "benchmark"]
+provides-extras = ["dev", "monty", "modal", "ikernel", "exe", "smolvm", "benchmark"]
 
 [[package]]
 name = "dspy-monty-interpreter"

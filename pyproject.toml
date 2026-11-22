@@ -21,6 +21,7 @@ monty = ["dspy-monty-interpreter>=0.3.0"]
 modal = ["modal>=1.5.3"]
 ikernel = ["ipykernel>=6.29", "jupyter-client>=8.6"]
 exe = []
+smolvm = []
 benchmark = ["psutil>=5.9"]
 
 [tool.uv]
