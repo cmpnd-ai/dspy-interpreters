@@ -28,6 +28,7 @@ There is no honest universal winner. Choose from the threat model:
 | Trusted local persistent development or real DSPy imports | `IPythonInterpreter` | Full CPython and package environment in a managed subprocess; easier lifecycle control than in-process execution |
 | Untrusted full CPython, ephemeral remote session | `ModalInterpreter` | Provider sandbox, network blocked by default, configurable CPU/memory/lifetime; higher latency and provider cost |
 | Persistent AI-engineering workspace | `ExeDevInterpreter` | Durable remote Linux VM with full CPython, package installation, filesystem, processes, and network |
+| Untrusted full CPython on the local machine | `SmolvmInterpreter` | One local microVM per session with its own Linux kernel, no network or host files by default; approximately 0.2 ms host calls and 0.27 s to interactive from a pack |
 | Broad local Python compatibility without native host execution | DSPy Deno/Pyodide | Wasm/Deno boundary and moderate warm speed, but **not recommended as a security default until the confirmed cache and protocol issues below are fixed** |
 
 If DSPy must choose one security-oriented default for arbitrary model-generated
@@ -51,12 +52,15 @@ pip install 'dspy-interpreters[benchmark]'
 
 exe.dev uses the system OpenSSH client and an authenticated exe.dev SSH
 configuration, so its `exe` extra has no additional Python dependencies.
+smolvm uses the [`smolvm`](https://github.com/smol-machines/smolvm) CLI, version
+1.36 or newer, so its `smolvm` extra has none either.
 
 ```python
 from dspy_interpreters import InProcessInterpreter, ModalInterpreter, SubprocessInterpreter
 from dspy_interpreters.exe import ExeDevInterpreter
 from dspy_interpreters.ikernel import IPythonInterpreter
 from dspy_interpreters.monty import MontyInterpreter
+from dspy_interpreters.smolvm import SmolvmInterpreter
 
 fast = InProcessInterpreter()
 separate = SubprocessInterpreter(execution_timeout=30)
@@ -64,6 +68,7 @@ restricted = MontyInterpreter()
 kernel = IPythonInterpreter(execution_timeout=60)
 remote = ModalInterpreter(cpu=1, memory=1024, block_network=True)
 workspace = ExeDevInterpreter()  # provisions and owns one temporary VM
+local_vm = SmolvmInterpreter(pack="dspy-guest.smolmachine")  # one local microVM per session
 ```
 
 Each implementation supports DSPy's constructor-time `tools` and
@@ -80,6 +85,22 @@ JSON-compatible inputs and tool results, captures generated-code output in the
 worker, and can terminate a timed-out worker. It still runs with the host user's
 filesystem, environment, credentials, process, and network authority; a child
 process alone is not a sandbox.
+
+`SmolvmInterpreter` boots each session from `image` (default
+`python:3.12-slim`) or from a `.smolmachine` pack. Since DSPy 3.5, `dspy.Flex`
+imports `dspy` inside the interpreter, so the VM must carry the host's DSPy
+version; a pack also skips the registry request an image makes per session.
+Build one once per DSPy version:
+
+```bash
+smolvm machine create --name dspy-guest -I python:3.12-slim --net
+smolvm machine start --name dspy-guest
+smolvm machine exec --name dspy-guest -- pip install "dspy==$(python -c 'import dspy; print(dspy.__version__)')"
+smolvm machine stop --name dspy-guest
+smolvm machine update --name dspy-guest --no-net  # sessions from the pack start offline
+smolvm pack create --from-vm dspy-guest -o dspy-guest
+smolvm machine delete --name dspy-guest --force
+```
 
 ## Same-machine benchmark
 
@@ -163,6 +184,22 @@ The persistent subprocess costs about 25 ms once at startup. Warm scalar
 execution remains below 0.2 ms p95; host callbacks remain below 0.4 ms p95.
 Large JSON transfer is the material boundary cost.
 
+### Focused local microVM comparison
+
+On macOS (Apple M4, 10 cores) with Python 3.12, DSPy 3.5.0 and smolvm 1.36.1,
+`scripts/run_benchmarks.py --smolvm --cold-runs 10 --warm-runs 100` measured,
+p50 / p95 in milliseconds:
+
+| Backend | Time to interactive | Warm scalar | Host-tool round trip | 1 MiB variable |
+|---|---:|---:|---:|---:|
+| Deno / Pyodide | 218.2 / 227.6 | 0.84 / 1.78 | 0.80 / 0.97 | 59.1 / 70.3 |
+| smolvm, from a pack | 265.7 / 966.6 | 0.06 / 0.08 | 0.17 / 0.18 | 10.9 / 15.9 |
+
+The smolvm p95 is the first session, which unpacks the image. Returning 50 MiB
+from the guest took 0.26 to 0.43 s against Deno's 1.6 to 3.1 s, intact in every
+run. A `dspy.Flex` forward costs about 0.65 s against Deno's 0.24 s, because
+each forward boots a VM and imports DSPy inside it.
+
 ### Memory and resource footprint
 
 Memory is not universally comparable. Host memory is the benchmark process plus
@@ -199,6 +236,7 @@ credential secrecy, resource enforcement, or protocol integrity.
 | IPython | Local kernel subprocess; **not a security sandbox** | Full host-user filesystem, environment, shell, subprocess, package, and credential authority | Host network | Startup/execution timeout; timed-out kernel becomes terminal | Process lifecycle isolation only; concurrent execution and callback reentrancy remain unsafe |
 | Modal | Remote provider sandbox | Remote container/session filesystem; no host filesystem unless a host tool exposes it | Blocked by default | Provider CPU, memory, total timeout, and idle timeout | Guest-controlled stdout can forge/replay protocol frames; trust Modal isolation and control plane; provider cost/availability |
 | exe.dev | Remote durable VM | Full Linux VM filesystem, processes, package installation, sudo, and persistent state | Enabled | SSH command/readiness/execution deadlines; forced process cleanup | Guest can forge the in-VM stdout protocol; trust exe.dev VM isolation/control plane; durable resources incur cost until deleted |
+| smolvm | Local microVM with its own Linux kernel, one per session | Full Linux VM filesystem and processes; no host directories unless `create_args` mounts them | Disabled unless `create_args` enables it | `cpus` and `memory` caps; execution timeout ends the session; the VM is deleted on shutdown | Guest can forge the in-VM stdout protocol; trust the smolvm hypervisor boundary; an image session asks its registry at every start, a pack does not |
 
 ### Confirmed adversarial findings
 
@@ -305,6 +343,7 @@ behind a facade/callback bridge. Persistent AI engineering has different needs:
 | IPython | Full host CPython/IPython | Yes | Kernel namespace plus host filesystem | Trusted notebooks, iterative development, optimizers |
 | Modal | Full remote CPython | Not in the current fixed slim image; adding a configurable image could install it | Sandbox session; current image is fixed | Ephemeral isolated full-Python jobs |
 | exe.dev | Full remote Linux CPython | Yes; packages and source can be installed in the VM | Durable VM filesystem and processes | Long-running model-driven development and optimization |
+| smolvm | Full local Linux CPython | Yes, from the VM image | VM filesystem and processes, deleted on shutdown | Untrusted full-Python jobs without a remote provider |
 
 Installing DSPy in a remote guest does **not** mean placing LM credentials
 there. A future “native DSPy in sandbox” mode should configure DSPy with a
@@ -330,6 +369,7 @@ real Flex facade execution/save/load.
 | IPython | Pass | Pass | Pass | Pass |
 | Modal process double + live | Pass | Pass | Pass | Pass |
 | exe.dev process double + live | Pass | Pass | Pass | Pass |
+| smolvm process double + live | Pass | Pass | Pass | Pass with DSPy in the VM image |
 
 The package supports `dspy>=3.3.0,<4.0`. DSPy 3.2 lacks the public
 `CodeExecutionError` and `Flex` APIs required by the suite. Released DSPy 3.3's
@@ -399,6 +439,9 @@ uv run --with 'deno>=2.4.5,<3' \
   --cold-runs 3 --warm-runs 20 --strict \
   --output reports/benchmarks-full.json
 ```
+
+Add `--smolvm` to either script, with `SMOLVM_PACK` naming a pack, to include a
+local smolvm VM.
 
 Live runs consume provider resources. Modal authentication and exe.dev SSH
 authentication must already work. `ExeDevInterpreter` bounds SSH control,

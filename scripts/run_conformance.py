@@ -80,6 +80,17 @@ def main() -> None:
     else:
         implementations.append(unavailable("exe.dev remote", "run with --exe after authenticating SSH to exe.dev"))
 
+    if "--smolvm" in sys.argv:
+        from dspy_interpreters.smolvm import SmolvmInterpreter
+
+        def smolvm() -> SmolvmInterpreter:
+            return SmolvmInterpreter(pack=os.environ.get("SMOLVM_PACK"))
+
+        smolvm.execution_instructions = SmolvmInterpreter.execution_instructions  # type: ignore[attr-defined]
+        implementations.append(run("smolvm local microVM", smolvm))
+    else:
+        implementations.append(unavailable("smolvm local microVM", "run with --smolvm after installing smolvm"))
+
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "git_revision": os.popen("git rev-parse --short HEAD 2>/dev/null").read().strip() or "uncommitted",
